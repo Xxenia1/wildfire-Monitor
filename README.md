@@ -21,27 +21,27 @@ All satellite data can be used directly in GEE, because it combines a multi-peta
 Wind and smoke: using [NOAA Operational Model Archive and Distribution System (NOMADS) API](https://nomads.ncep.noaa.gov) to fetch hourly High_Resolution Rapid Refresh (HRRR) data.
 
 ## Deliverable:
-- The final deliverable is an interactive web-based wildfire monitoring system that displays real-time wildfire activities, wind patterns, and smoke dispersion with the ability to switch between different data layers. It includes several modes:
+The final deliverable is an interactive web-based wildfire monitoring system that displays real-time wildfire activities, wind patterns, and smoke dispersion with the ability to switch between different data layers. It includes several modes:
 
 1. Fire mode: display real-time wildfire locations using VIIRS data, which updates ever 12 hours.
-    •Active fire hotspots: display as fire icons. And users can click each fire point to learn fire size, detection time, source, etc.
-    •Display the affected area of ongoing/historical fires.
-    •Time slider tool: updates historical fire (since 2019) data dynamically. 
+- Active fire hotspots: display as fire icons. And users can click each fire point to learn fire size, detection time, source, etc.
+-  Display the affected area of ongoing/historical fires.
+- Time slider tool: updates historical fire (since 2019) data dynamically. 
 2. Wind mode: overlays animated wind speed and direction from NOAA HRRR, which updates every hour. 
-    •Animated wind particles flow in the direction of wind movement.
-    •The speed of particles depends on the wind speed.
-    •Opacity and color intensity represent wind strength.
-    •Users can toggle on/off.
+- Animated wind particles flow in the direction of wind movement.
+- The speed of particles depends on the wind speed.
+- Opacity and color intensity represent wind strength.
+- Users can toggle on/off.
 3. Smoke mode: shows smoke dispersion from NOAA HRRR Smoke, which updates every hour.
-    •A semi-transparent gradient overlay shows smoke concentration.
-    •Darker areas indicate higher smoke density.
-    •Users can toggle on/off.
+- A semi-transparent gradient overlay shows smoke concentration.
+- Darker areas indicate higher smoke density.
+- Users can toggle on/off.
 4. NDVI time-series: animates NDVI changes over time. (2024~present)
-    •Once select , the animation will display on the side bar along with D3 line chart (vegetation index over time).
+- Once select , the animation will display on the side bar along with D3 line chart (vegetation index over time).
 5. Interactive controls: 
-•Layer toggles: users can switch between fire, wind, and smoke modes.
-•Search bar: allow users to search for a specific location (like city, county), then automatically zooms to the selected area.
-•Time slider: allow users to view historical fire data dynamically.
+- Layer toggles: users can switch between fire, wind, and smoke modes.
+- Search bar: allow users to search for a specific location (like city, county), then automatically zooms to the selected area.
+- Time slider: allow users to view historical fire data dynamically.
 
 
 
