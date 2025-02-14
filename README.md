@@ -1,7 +1,7 @@
 # California Wildfire Monitoring Platform
 ## Brief Introduction:
 - The wildfire monitoring platform aims to provide an interactive, real-time monitoring platform for tracking wildfires, wind speed, and smoke dispersion in California. 
-- By leveraging Google Earth Engine (GEE) as backend with a series of functions extracting, preparing, loading, and manipulating all satellite data. At the front end of this project, it mainly utilizes leaflet.js and D3.js implement all visualizations.
+- By leveraging *Google Earth Engine (GEE)* as backend with a series of functions extracting, preparing, loading, and manipulating all satellite data. At the front end of this project, it mainly utilizes *leaflet.js* and *D3.js* implement all visualizations.
 
 ### Audience:
 1. Researchers who study wildfire behavior and trends.
