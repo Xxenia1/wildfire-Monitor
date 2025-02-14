@@ -5,7 +5,7 @@
 
 ### Audience:
 1. Researchers who study wildfire behavior and trends.
-2. Emergency officials: like firefighters and their management team can use this real-time fire tracking for response planning.
+2. Emergency angencies: like firefighters and their management team can use this real-time fire tracking for response planning.
 3. Individuals who concerned about real-time wildfire conditions.
 
 ### Region/Study Area: California
