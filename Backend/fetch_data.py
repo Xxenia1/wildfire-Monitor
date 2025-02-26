@@ -23,13 +23,10 @@ end_time_str = now.strftime('%Y-%m-%dT%H:%M:%S')
 california = ee.FeatureCollection("TIGER/2018/States") \
             .filter(ee.Filter.eq("NAME", "California"))
 
-viirs_noaa20 = ee.ImageCollection('NASA/LANCE/NOAA20_VIIRS/C2')
-viirs_snpp = ee.ImageCollection('NASA/LANCE/SNPP_VIIRS/C2')
+noaa_viirs = ee.ImageCollection('FIRMS') \
+                .filter(ee.Filter.date(start_time_str, end_time_str)) \
+                .filterBounds(california)
 
-noaa_viirs = viirs_noaa20.merge(viirs_snpp) \
-                 .filter(ee.Filter.date(start_time_str, end_time_str)) \
-                 .filterBounds(california) \
-                 .select(['FireMask'])
 
 ## get the latest one 
 latest_fire = noaa_viirs.first()
@@ -37,9 +34,9 @@ latest_fire = noaa_viirs.first()
 # %% convert image to geojson and save it
 # Convert fire image to vector points
 if latest_fire.getInfo() is None:
-    print("⚠️ No fire data found in California in the past 24 hours. Exiting...")
+    print("⚠️ No fire data found in California in the past 24 hours.")
 else:
-    # ✅ Convert fire image to vector points
+    # Convert fire image to vector points
     fire_vectors = latest_fire.reduceToVectors(
         reducer=ee.Reducer.countEvery(),
         geometryType='centroid',  # Convert fire pixels to points
@@ -47,11 +44,11 @@ else:
         maxPixels=1e13
     )
 
-    # ✅ Convert to GeoJSON
+    # Convert to GeoJSON
     fire_geojson = fire_vectors.getInfo()
 
-    # ✅ Save as JSON
-    output_file = "Data/UpToDate_fire_NOAA.json"
+    # Save as JSON
+    output_file = "Data/UpToDate_fire.json"
     with open(output_file, "w") as f:
         json.dump(fire_geojson, f, indent=4)
 
