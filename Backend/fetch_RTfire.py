@@ -1,11 +1,11 @@
-# fetch fire mode data
+# fetch real-time fire data for fire mode
 
 # %% python visualize
 import ee
 import json
 from datetime import datetime, timedelta, timezone
 
-ee.Initialize(project='canvas-radio-444702-k2')
+ee.Initialize(project='canvas-radio-444702-k2') ## initialize GEE with a exist project
 
 # %% get UTC time
 now = datetime.now(timezone.utc)
