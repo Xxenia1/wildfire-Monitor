@@ -34,7 +34,7 @@ latest_fire = noaa_viirs.first()
 # %% convert image to geojson and save it
 # Convert fire image to vector points
 if latest_fire.getInfo() is None:
-    print("⚠️ No fire data found in California in the past 24 hours.")
+    print("No fire data found in California in the past 24 hours.") ## for now, there's no active fire activities in CA
 else:
     # Convert fire image to vector points
     fire_vectors = latest_fire.reduceToVectors(
