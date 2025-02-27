@@ -3,8 +3,8 @@ name: Fetch Real-time Fire Data
 
 on:
   schedule:
-    - cron: "0 8 * * *"  # 每天 UTC 08:00 自动运行
-  workflow_dispatch:  # 允许手动触发
+    - cron: "0 8 * * *"  # automating on UTC 08:00 everyday
+  workflow_dispatch:  # allows to work manually
 
 jobs:
   fetch-fire-data:
@@ -22,7 +22,7 @@ jobs:
       - name: 📦 Install Dependencies
         run: |
           pip install earthengine-api
-          pip install requests  # 如果 fetch 过程中用到 requests 库
+          pip install requests  # if it needs requests when fetching
 
       - name: 🔑 Authenticate with Google Earth Engine (GEE)
         env:
