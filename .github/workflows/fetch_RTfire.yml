@@ -26,12 +26,10 @@ jobs:
 
       - name: 🔑 Authenticate with Google Earth Engine (GEE)
         env:
-          GEE_CREDENTIALS: ${{ secrets.GEE_CREDENTIALS }}
+            GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GEE_CREDENTIALS }}
         run: |
-          echo "$GEE_CREDENTIALS" > gee_credentials.json
-          export GOOGLE_APPLICATION_CREDENTIALS=gee_credentials.json
-          earthengine authenticate --quiet --authorization-code=$(cat gee_credentials.json)
-
+            earthengine authenticate --quiet
+            
       - name: 🔥 Run Fire Data Fetch Script
         run: python Backend/fetch_RTFire.py
 
