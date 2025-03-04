@@ -48,4 +48,6 @@ df.to_csv("historical_fire_data_CA.csv", index=False)
 with open("historical_fire_data_CA.geojson", "w") as f:
     json.dump(fire_geojson, f)
 
-print("✅ Historical fire data saved as 'historical_fire_data_CA.csv' and 'historical_fire_data_CA.geojson'.")
+print("Historical fire data saved as 'historical_fire_data_CA.csv' and 'historical_fire_data_CA.geojson'.")
+
+# %%
