@@ -14,7 +14,7 @@ All satellite data can be used directly in GEE, because it combines a multi-peta
 
 | Data | Data Source | Usage |
 |----------|----------|----------|
-| GOES ABI | [GOES-16 MCMIPC Series ABI Level 2 Cloud and Moisture Imagery CONUS](https://developers.google.com/earth-engine/datasets/catalog/NOAA_GOES_16_MCMIPC) | Displaying historical wildfire data |
+| GOES ABI | [GOES-16 FDCC Series ABI Level 2 Fire/Hot Spot Characterization CONUS](https://developers.google.com/earth-engine/datasets/catalog/NOAA_GOES_16_FDCC) | Displaying historical wildfire data |
 | VIIRS | [FIRMS: Fire Information for Resource Management System](https://developers.google.com/earth-engine/datasets/catalog/FIRMS) | Used for detecting real-time wildfire data, and it updates per day.  |
 | NDVI Time-Series | [Landsat Collection 2 Tier 1 Level 2 Annual NDVI Composite](https://developers.google.com/earth-engine/datasets/catalog/LANDSAT_COMPOSITES_C02_T1_L2_ANNUAL_NDVI?hl=zh-cn) | Used for displaying NDVI time series. (2013~present) |
 
