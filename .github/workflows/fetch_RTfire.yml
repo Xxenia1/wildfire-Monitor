@@ -11,32 +11,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout Repository
+      - name:  Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🐍 Set up Python
+      - name:  Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
-      - name: 📦 Install Dependencies
+      - name:  Install Dependencies
         run: |
-          pip install earthengine-api
+          pip install earthengine-api gee pandas
           pip install requests  # if it needs requests when fetching
 
-      - name: 🔑 Authenticate with Google Earth Engine (GEE)
+      - name:  Authenticate with Google Earth Engine (GEE)
         env:
             GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GEE_CREDENTIALS }}
         run: |
+            echo "$GOOGLE_APPLICATION_CREDENTIALS" > gee_key.json
+            gcloud auth activate-service-account --key-file=gee_key.json
             earthengine authenticate --quiet
             
-      - name: 🔥 Run Fire Data Fetch Script
+      - name:  Run Fire Data Fetch Script
         run: python Backend/fetch_RTFire.py
 
-      - name: 📤 Commit and Push Updated Fire Data
+      - name:  Commit and Push Updated Fire Data
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add Data/UpToDate_fire_NOAA.json
-          git commit -m "🔄 Auto-update fire data (via GitHub Actions)" || echo "No changes to commit"
+          git commit -m " Auto-update fire data (via GitHub Actions)" || echo "No changes to commit"
           git push || echo "No changes to push"
