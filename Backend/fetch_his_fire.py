@@ -4,6 +4,7 @@ import ee
 import json
 import geemap
 import pandas as pd
+
 # %%
 ee.Initialize(project='canvas-radio-444702-k2')
 # %% set data range
