@@ -4,6 +4,7 @@ import ee
 import json
 import geemap
 import pandas as pd
+import geopandas as gpd
 from google.cloud import storage
 
 # %%
@@ -61,4 +62,27 @@ def fetch_and_store_fire_data(year):
 for year in range(2019, 2026):
     fetch_and_store_fire_data(year)
 
+# %% check status
+tasks = ee.batch.Task.list()
+for task in tasks:
+    print(task.id, task.state)
+
+# %%
+
+# %% check attributes
+FILE_NAME = "fire_data/fire_data_2024.geojson.geojson" 
+# connect to GCS
+client = storage.Client()
+bucket = client.get_bucket(BUCKET_NAME)
+blob = bucket.blob(FILE_NAME)
+geojson_data = json.loads(blob.download_as_text())
+# check attributes
+gdf = gpd.GeoDataFrame.from_features(geojson_data["features"])
+# **查看前 5 行数据**
+print("🔥 火灾数据预览:")
+print(gdf.head())
+
+# **查看所有列名**
+print("\n📌 火灾数据包含的字段:")
+print(gdf.columns)
 # %%
