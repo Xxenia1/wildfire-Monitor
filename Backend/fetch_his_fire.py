@@ -68,6 +68,12 @@ for task in tasks:
     print(task.id, task.state)
 
 # %%
+from google.cloud import storage
+
+client = storage.Client()
+buckets = list(client.list_buckets())
+
+print("✅ 认证成功！找到存储桶:", [b.name for b in buckets])
 
 # %% check attributes
 FILE_NAME = "fire_data/fire_data_2024.geojson.geojson" 
