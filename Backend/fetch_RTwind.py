@@ -8,37 +8,31 @@ import json
 import os
 import datetime
 import xarray as xr
+from herbie import Herbie
 
 # %%
 # set CA boundary
 california = ee.FeatureCollection("TIGER/2018/States") \
             .filter(ee.Filter.eq("NAME", "California"))
 
+# %%
+# Get today's date in YYYYMMDD format
+today = datetime.datetime.utcnow().strftime("%Y%m%d")
 
-# %% fetch real-time wind data from HRRR
-# Get current UTC time
-now = datetime.datetime.utcnow()
-date_str = now.strftime("%Y%m%d")  # Format: YYYYMMDD
-hour_str = now.strftime("%H")  # Format: HH (UTC hour)
+#Fet ch the most recent HRRR dataset
+H = Herbie(
+    date=today,   # Use today's date
+    model="hrrr",
+    product="sfc",
+    fxx=0  # Forecast hour (0 = analysis time)
+)
 
-# NOAA HRRR URL format (Updated)
-base_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/hrrr.YYYYMMDD/conus/hrrr.tHHz.wrfsfcf00.grib2"
-
-# Define output file
-file_name = "realtime_wind_data.grib2"
-
-print(f" Attempting to download HRRR data from: {base_url}")
-
-response = requests.get(base_url, stream=True)
-
-if response.status_code == 200:
-    with open(file_name, "wb") as f:
-        f.write(response.content)
-    print(f" Successfully downloaded HRRR data: {file_name}")
-else:
-    print(f" Failed to download HRRR data. Status code: {response.status_code}")
-    exit()
-
+# Check available data fields
+print("Available HRRR Data Fields:")
+print(H.inventory())
+print("Herbie expects the file at:", H.get_localFilePath())
+# Download the full HRRR file
+H.download()
 # %%
 
 # %%
