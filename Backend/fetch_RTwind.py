@@ -16,26 +16,29 @@ california = ee.FeatureCollection("TIGER/2018/States") \
 
 
 # %% fetch real-time wind data from HRRR
-# define URL
-base_url = "https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/hrrr.YYYYMMDD/hrrr.t{HH}z.wrfsfcf00.grib2"
+# Get current UTC time
+now = datetime.datetime.utcnow()
+date_str = now.strftime("%Y%m%d")  # Format: YYYYMMDD
+hour_str = now.strftime("%H")  # Format: HH (UTC hour)
 
-# Get latest available hour (e.g., "12" for 12 UTC)
-hour = "12"  # Change this dynamically if needed
-url = base_url.format(hour=hour)
+# NOAA HRRR URL format (Updated)
+base_url = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/hrrr.YYYYMMDD/conus/hrrr.tHHz.wrfsfcf00.grib2"
 
 # Define output file
 file_name = "realtime_wind_data.grib2"
 
-# Download the GRIB2 file
-print(f"Downloading real-time HRRR wind data from {url} ...")
-response = requests.get(url, stream=True)
+print(f" Attempting to download HRRR data from: {base_url}")
+
+response = requests.get(base_url, stream=True)
+
 if response.status_code == 200:
     with open(file_name, "wb") as f:
         f.write(response.content)
-    print(f"Downloaded successfully: {file_name}")
+    print(f" Successfully downloaded HRRR data: {file_name}")
 else:
-    print(f"Failed to download HRRR data. Status code: {response.status_code}")
+    print(f" Failed to download HRRR data. Status code: {response.status_code}")
     exit()
+
 # %%
 
 # %%
