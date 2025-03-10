@@ -23,16 +23,29 @@ today = datetime.datetime.utcnow().strftime("%Y%m%d")
 H = Herbie(
     date=today,   # Use today's date
     model="hrrr",
-    product="sfc",
+    product="sfc", # model product
     fxx=0  # Forecast hour (0 = analysis time)
 )
 
-# Check available data fields
-print("Available HRRR Data Fields:")
-print(H.inventory())
-print("Herbie expects the file at:", H.get_localFilePath())
 # Download the full HRRR file
 H.download()
 # %%
+H.grib # path
+H.inventory() # look at GRIB2 file contents
+# %%
+H.inventory(r":[U|V]GRD:10 m above")
 
+# %%
+ds = H.xarray(r":[U|V]GRD:10 m above")
+print(ds)
+# %%
+
+# %%
+mySubset = H.download(r":[U|V]GRD:10 m above", verbose=True)
+mySubset
+# %% read subset
+subset_file = "/Users/xeniax/data/hrrr/20250310/subset_47ef391b_hrrr.t00z.wrfsfcf00.grib2"
+#open dataset
+#ds = xr.open_dataset(subset_file, engine="cfgrib")
+#print(ds)
 # %%
