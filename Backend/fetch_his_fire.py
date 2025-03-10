@@ -61,34 +61,3 @@ def fetch_and_store_fire_data(year):
 # loop 2019 to 2025
 for year in range(2019, 2026):
     fetch_and_store_fire_data(year)
-
-# %% check status
-tasks = ee.batch.Task.list()
-for task in tasks:
-    print(task.id, task.state)
-
-# %%
-from google.cloud import storage
-
-client = storage.Client()
-buckets = list(client.list_buckets())
-
-print("✅ 认证成功！找到存储桶:", [b.name for b in buckets])
-
-# %% check attributes
-FILE_NAME = "fire_data/fire_data_2024.geojson.geojson" 
-# connect to GCS
-client = storage.Client()
-bucket = client.get_bucket(BUCKET_NAME)
-blob = bucket.blob(FILE_NAME)
-geojson_data = json.loads(blob.download_as_text())
-# check attributes
-gdf = gpd.GeoDataFrame.from_features(geojson_data["features"])
-# **查看前 5 行数据**
-print("🔥 火灾数据预览:")
-print(gdf.head())
-
-# **查看所有列名**
-print("\n📌 火灾数据包含的字段:")
-print(gdf.columns)
-# %%
