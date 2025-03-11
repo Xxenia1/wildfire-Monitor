@@ -17,8 +17,6 @@ import requests
 import os
 import xarray as xr
 
-!pip install herbie-data
-
 from herbie import Herbie
 
 california = ee.FeatureCollection("TIGER/2018/States") \
