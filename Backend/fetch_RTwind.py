@@ -36,8 +36,11 @@ H.inventory() # look at GRIB2 file contents
 H.inventory(r":[U|V]GRD:10 m above")
 
 # %%
-ds = H.xarray(r":[U|V]GRD:10 m above")
+file_path = "/Users/xeniax/data/hrrr/20250310/subset_47ef391b__hrrr.t00z.wrfsfcf00.grib2"
+ds = xr.open_dataset(file_path, engine="cfgrib")
 print(ds)
+# %%
+
 # %%
 
 # %%
