@@ -23,7 +23,8 @@ end_time_str = now.strftime('%Y-%m-%dT%H:%M:%S')
 california = ee.FeatureCollection("TIGER/2018/States") \
             .filter(ee.Filter.eq("NAME", "California"))
 
-noaa_viirs = ee.ImageCollection('FIRMS') \
+# %% try different dataset
+noaa_viirs = ee.ImageCollection('NASA/VIIRS/002/VNP09GA') \
                 .filter(ee.Filter.date(start_time_str, end_time_str)) \
                 .filterBounds(california)
 

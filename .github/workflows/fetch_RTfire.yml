@@ -21,7 +21,7 @@ jobs:
 
       - name:  Install Dependencies
         run: |
-          pip install earthengine-api gee pandas
+          pip install earthengine-api pandas
           pip install requests  # if it needs requests when fetching
 
       - name:  Authenticate with Google Earth Engine (GEE)
