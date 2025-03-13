@@ -24,7 +24,7 @@ california = ee.FeatureCollection("TIGER/2018/States") \
             .filter(ee.Filter.eq("NAME", "California"))
 
 # %% try different dataset
-noaa_viirs = ee.ImageCollection('NASA/VIIRS/002/VNP09GA') \
+noaa_viirs = ee.ImageCollection('NASA/LANCE/NOAA20_VIIRS/C2') \
                 .filter(ee.Filter.date(start_time_str, end_time_str)) \
                 .filterBounds(california)
 
@@ -49,7 +49,7 @@ else:
     fire_geojson = fire_vectors.getInfo()
 
     # Save as JSON
-    output_file = "Data/UpToDate_fire.json"
+    output_file = "Data/UpToDate_fire_NOAA.json"
     with open(output_file, "w") as f:
         json.dump(fire_geojson, f, indent=4)
 

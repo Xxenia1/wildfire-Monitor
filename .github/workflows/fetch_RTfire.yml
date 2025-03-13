@@ -24,13 +24,14 @@ jobs:
           pip install earthengine-api pandas
           pip install requests  # if it needs requests when fetching
 
-      - name:  Authenticate with Google Earth Engine (GEE)
+      - name: Authenticate with Google Earth Engine (GEE)
         env:
             GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GEE_CREDENTIALS }}
         run: |
             echo "$GOOGLE_APPLICATION_CREDENTIALS" > gee_key.json
             gcloud auth activate-service-account --key-file=gee_key.json
-            earthengine authenticate --quiet
+            export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gee_key.json
+        
             
       - name:  Run Fire Data Fetch Script
         run: python Backend/fetch_RTFire.py
