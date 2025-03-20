@@ -3,6 +3,9 @@
 # %% python visualize
 import ee
 import json
+import requests
+import xarray as xr
+from google.cloud import storage
 from datetime import datetime, timedelta, timezone
 
 ee.Initialize(project='canvas-radio-444702-k2') ## initialize GEE with a exist project
@@ -20,13 +23,14 @@ end_time_str = now.strftime('%Y-%m-%dT%H:%M:%S')
 
 # %% fetch real-time fire data, using VIIRS
 ## set boundary
-california = ee.FeatureCollection("TIGER/2018/States") \
-            .filter(ee.Filter.eq("NAME", "California"))
+##california = ee.FeatureCollection("TIGER/2018/States") \
+            ##.filter(ee.Filter.eq("NAME", "California"))
+us = ee.FeatureCollection("TIGER/2018/States") \
 
 # %% try different dataset
 noaa_viirs = ee.ImageCollection('NASA/LANCE/NOAA20_VIIRS/C2') \
                 .filter(ee.Filter.date(start_time_str, end_time_str)) \
-                .filterBounds(california)
+                .filterBounds(us)
 
 
 ## get the latest one 
@@ -35,7 +39,7 @@ latest_fire = noaa_viirs.first()
 # %% convert image to geojson and save it
 # Convert fire image to vector points
 if latest_fire.getInfo() is None:
-    print("No fire data found in California in the past 24 hours.") ## for now, there's no active fire activities in CA
+    print("No fire data found in the United States in the past 24 hours.") ## for now, there's no active fire activities in CA
 else:
     # Convert fire image to vector points
     fire_vectors = latest_fire.reduceToVectors(
