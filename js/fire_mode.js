@@ -64,7 +64,7 @@ export function loadHistoricalLayer(map, year) {
         console.log(`📂 Historical fire data for ${year} loaded`);
       })
       .catch(err => {
-        console.error(`❌ Failed to load fire data for ${year}:`, err);
+        console.error(`Failed to load fire data for ${year}:`, err);
       });
   }
   
