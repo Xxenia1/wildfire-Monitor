@@ -49,7 +49,7 @@ else:
     masked_images = fires_list.map(mask_confident)
     merged_image = ee.ImageCollection(masked_images).mosaic()
 
-# %% define title
+# %% define title to divide the boundary
     tiles = [
         ee.Geometry.Rectangle([-125, 32, -110, 42]),  # CA/NV/OR
         ee.Geometry.Rectangle([-110, 32, -90, 42]),   # AZ/NM/TX/OK
@@ -58,7 +58,7 @@ else:
     ]
     # export catalog
     os.makedirs("../Data", exist_ok=True)
-    timestamp = now.strftime("%Y%m%d_%H%M%S")
+    timestamp = now.strftime("%Y%m%d")
     all_features = []
 
     for i, tile in enumerate(tiles):
@@ -86,6 +86,31 @@ else:
         with open(output_file, "w") as f:
             json.dump(final_geojson, f, indent=4)
         print(f"Saved combined tiles to: {output_file}")
+
+
+# %% export to GCS
+
+# Set up your Google Cloud Storage details
+BUCKET_NAME = 'wildfire-monitor-data'
+# Generate timestamp dynamically 
+timestamp = datetime.now().strftime("%Y%m%d")
+# file path
+DESTINATION_BLOB_NAME = f'RT_fire_data/fires_merged_tiled_{timestamp}.geojson'  
+SOURCE_FILE_NAME = f'../Data/fires_merged_tiled_{timestamp}.geojson'  
+
+# Function to upload file to GCS
+def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
+    #Uploads a file to the Google Cloud Storage bucket.
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+
+    blob.upload_from_filename(source_file_name)
+
+    print(f"File {source_file_name} uploaded to {destination_blob_name} in bucket {bucket_name}.")
+
+# Execute upload
+upload_to_gcs(BUCKET_NAME, SOURCE_FILE_NAME, DESTINATION_BLOB_NAME)
 
 
 # %%
