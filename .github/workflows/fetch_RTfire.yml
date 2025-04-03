@@ -3,7 +3,7 @@ name: Fetch Real-time Fire Data
 
 on:
   schedule:
-    - cron: "0 8 * * *"  # automating on UTC 08:00 everyday
+    - cron: "0 12 * * *"  # automating on UTC 08:00 everyday
   workflow_dispatch:  # allows to work manually
 
 jobs:
