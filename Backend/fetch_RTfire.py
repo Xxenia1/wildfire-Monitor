@@ -10,6 +10,9 @@ from google.cloud import storage
 from datetime import datetime, timedelta, timezone
 
 ee.Initialize(project='canvas-radio-444702-k2') ## initialize GEE with a exist project
+storage_client = storage.Client()
+# set GCS bucket
+BUCKET_NAME = "wildfire-monitor-data"
 
 # %% set parameters
 time_window_hours = 72  
@@ -49,18 +52,17 @@ else:
     masked_images = fires_list.map(mask_confident)
     merged_image = ee.ImageCollection(masked_images).mosaic()
 
-# %% define title to divide the boundary
+# %% define tiles to divide the boundary
     tiles = [
         ee.Geometry.Rectangle([-125, 32, -110, 42]),  # CA/NV/OR
         ee.Geometry.Rectangle([-110, 32, -90, 42]),   # AZ/NM/TX/OK
         ee.Geometry.Rectangle([-125, 42, -100, 50]),  # WA/MT/ID/WY
         ee.Geometry.Rectangle([-100, 42, -80, 50])    # Midwest
     ]
-    # export catalog
-    os.makedirs("../Data", exist_ok=True)
-    timestamp = now.strftime("%Y%m%d")
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     all_features = []
-
+    # fetch data
     for i, tile in enumerate(tiles):
         print(f"Processing tile {i+1}/{len(tiles)}...")
         try:
@@ -82,35 +84,16 @@ else:
             "features": all_features
         }
 
-        output_file = f"../Data/fires_merged_tiled_{timestamp}.geojson"
-        with open(output_file, "w") as f:
-            json.dump(final_geojson, f, indent=4)
-        print(f"Saved combined tiles to: {output_file}")
+         # Upload directly to Google Cloud Storage
+        destination_blob_name = f'RT_fire_data/fires_merged_tiled_{timestamp}.geojson'
+        bucket = storage_client.bucket(BUCKET_NAME)
+        blob = bucket.blob(destination_blob_name)
 
+        blob.upload_from_string(
+        data=json.dumps(final_geojson, indent=4),
+        content_type='application/json'
+        )
 
-# %% export to GCS
-
-# Set up your Google Cloud Storage details
-BUCKET_NAME = 'wildfire-monitor-data'
-# Generate timestamp dynamically 
-timestamp = datetime.now().strftime("%Y%m%d")
-# file path
-DESTINATION_BLOB_NAME = f'RT_fire_data/fires_merged_tiled_{timestamp}.geojson'  
-SOURCE_FILE_NAME = f'../Data/fires_merged_tiled_{timestamp}.geojson'  
-
-# Function to upload file to GCS
-def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
-    #Uploads a file to the Google Cloud Storage bucket.
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(destination_blob_name)
-
-    blob.upload_from_filename(source_file_name)
-
-    print(f"File {source_file_name} uploaded to {destination_blob_name} in bucket {bucket_name}.")
-
-# Execute upload
-upload_to_gcs(BUCKET_NAME, SOURCE_FILE_NAME, DESTINATION_BLOB_NAME)
-
+        print(f"Successfully uploaded GeoJSON to {destination_blob_name} in bucket {BUCKET_NAME}.")
 
 # %%
