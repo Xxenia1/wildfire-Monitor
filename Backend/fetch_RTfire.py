@@ -64,36 +64,30 @@ else:
     all_features = []
     # fetch data
     for i, tile in enumerate(tiles):
-        print(f"Processing tile {i+1}/{len(tiles)}...")
-        try:
-            fire_vectors = merged_image.reduceToVectors(
-                reducer=ee.Reducer.countEvery(),
-                geometry=tile,
-                geometryType='centroid',
-                scale=1000,
-                maxPixels=1e13
-            )
-            geojson = fire_vectors.getInfo()
-            all_features.extend(geojson['features'])
-        except Exception as e:
-            print(f"Tile {i+1} failed: {e}")
+        print(f"Exporting tile {i+1}/{len(tiles)}...")
 
-    if all_features:
-        final_geojson = {
-            "type": "FeatureCollection",
-            "features": all_features
-        }
+    # reduce raster data to vectors
+    fire_vectors = merged_image.reduceToVectors(
+        reducer=ee.Reducer.countEvery(),
+        geometry=tile,
+        geometryType='centroid',
+        scale=1000,
+        maxPixels=1e13
+    )
 
-         # Upload directly to Google Cloud Storage
-        destination_blob_name = f'RT_fire_data/fires_merged_tiled_{timestamp}.geojson'
-        bucket = storage_client.bucket(BUCKET_NAME)
-        blob = bucket.blob(destination_blob_name)
+    # define file path on GCS
+    file_name = f"RT_fire_data/fires_tile_{i+1}_{timestamp}.geojson"
 
-        blob.upload_from_string(
-        data=json.dumps(final_geojson, indent=4),
-        content_type='application/json'
-        )
+    # export to Google Cloud Storage directly
+    task = ee.batch.Export.table.toCloudStorage(
+        collection=fire_vectors,
+        description=f"RT_fire_export_tile_{i+1}_{timestamp}",
+        bucket=BUCKET_NAME,
+        fileFormat="GeoJSON",
+        path=file_name
+    )
+    task.start()
 
-        print(f"Successfully uploaded GeoJSON to {destination_blob_name} in bucket {BUCKET_NAME}.")
+    print(f"Tile {i+1} export started.")
 
 # %%
