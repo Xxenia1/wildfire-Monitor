@@ -21,20 +21,19 @@ jobs:
 
       - name:  Install Dependencies
         run: |
-          pip install earthengine-api pandas
-          pip install requests  # if it needs requests when fetching
+         pip install earthengine-api google-cloud-storage geopandas pandas geemap requests
 
       - name: Authenticate with Google Earth Engine (GEE)
         env:
             GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GEE_CREDENTIALS }}
         run: |
             echo "$GOOGLE_APPLICATION_CREDENTIALS" > gee_key.json
-            gcloud auth activate-service-account --key-file=gee_key.json
-            export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gee_key.json
+            earthengine authenticate --service-account --private-key=gee_key.json
+            
         
             
       - name:  Run Fire Data Fetch Script
-        run: python Backend/fetch_RTFire.py
+        run: python Backend/fetch_RTfire.py
 
       - name:  Commit and Push Updated Fire Data
         run: |
