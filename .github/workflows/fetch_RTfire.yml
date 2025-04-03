@@ -34,7 +34,10 @@ jobs:
         
             
       - name:  Run Fire Data Fetch Script
-        run: python Backend/fetch_RTfire.py
+        working-directory: ./Backend
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
+        run: python fetch_RTfire.py
 
       - name:  Commit and Push Updated Fire Data
         run: |
