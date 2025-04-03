@@ -28,8 +28,8 @@ jobs:
             GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GEE_CREDENTIALS }}
         run: |
             echo "$GOOGLE_APPLICATION_CREDENTIALS" > gee_key.json
-            earthengine authenticate --service-account --private-key=gee_key.json
-            echo "GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gee_key.json" >> $GITHUB_ENV
+            gcloud auth activate-service-account --key-file=gee_key.json
+            export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gee_key.json
             
         
             
