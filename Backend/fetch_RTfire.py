@@ -16,7 +16,7 @@ BUCKET_NAME = "wildfire-monitor-data"
 
 # %% set parameters
 time_window_hours = 72  
-now = datetime.now(timezone.est) # change time zone to EST
+now = datetime.now(timezone.utc) 
 start_time = now - timedelta(hours=time_window_hours)
 
 ## convert time to string
