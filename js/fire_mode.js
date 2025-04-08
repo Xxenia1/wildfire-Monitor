@@ -61,7 +61,7 @@ export function loadHistoricalLayer(map, year) {
         }).addTo(map);
   
         map.fitBounds(historicalLayer.getBounds());
-        console.log(`📂 Historical fire data for ${year} loaded`);
+        console.log(` Historical fire data for ${year} loaded`);
       })
       .catch(err => {
         console.error(`Failed to load fire data for ${year}:`, err);

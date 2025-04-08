@@ -20,8 +20,8 @@ now = datetime.now(timezone.utc)
 start_time = now - timedelta(hours=time_window_hours)
 
 ## convert time to string
-start_time_str = start_time.strftime('%Y-%m-%dT%H:%M:%S')
-end_time_str = now.strftime('%Y-%m-%dT%H:%M:%S')
+start_time_str = start_time.strftime('%Y-%m-%d')
+end_time_str = now.strftime('%Y-%m-%d')
 
 # %% fetch real-time fire data, using VIIRS
 ## set boundary (whole states)
@@ -60,7 +60,7 @@ else:
         ee.Geometry.Rectangle([-100, 42, -80, 50])    # Midwest
     ]
     
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d")
     all_features = []
     # fetch data
     for i, tile in enumerate(tiles):
