@@ -71,7 +71,7 @@ function loadHistoricalLayer(map, year) {
     map.removeLayer(historicalLayer);
   }
 
-  const url = `https://storage.googleapis.com/wildfire-monitor-data/fire_data/fire_data_${year}.geojson`;
+  const url = `https://storage.googleapis.com/wildfire-monitor-data/fire_data/fire_data_${year}.geojson.geojson`;
   fetch(url)
     .then(res => res.json())
     .then(data => {
