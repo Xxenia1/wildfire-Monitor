@@ -22,20 +22,27 @@ start_time = now - timedelta(hours=time_window_hours)
 ## convert time to string
 start_time_str = start_time.strftime('%Y-%m-%d')
 end_time_str = now.strftime('%Y-%m-%d')
+timestamp = now.strftime('%Y%m%d')
 
 # %% fetch real-time fire data, using VIIRS
-## set boundary (whole states)
-
+## define coundaries and administrative datasets
 us = ee.FeatureCollection("TIGER/2018/States")
 
+# CA counties
+counties = ee.FeatureCollection("TIGER/2018/Counties")\
+             .filter(ee.Filter.eq('STATEFP', '06'))
+# CA cities
+cities = ee.FeatureCollection("TIGER/2018/Places") \
+    .filter(ee.Filter.eq('STATEFP', '06'))
+
 # %% try different dataset
-noaa_viirs = ee.ImageCollection('NASA/LANCE/NOAA20_VIIRS/C2') \
+suomi_viirs = ee.ImageCollection("NASA/LANCE/SNPP_VIIRS/C2") \
                 .filter(ee.Filter.date(start_time_str, end_time_str)) \
                 .filterBounds(us)
 
 
 ## get the latest one 
-count = noaa_viirs.size().getInfo()
+count = suomi_viirs.size().getInfo()
 print(f"VIIRS image count in the past {time_window_hours}h: {count}")
 
 # %% convert image to geojson and save it
@@ -48,7 +55,7 @@ else:
         image = ee.Image(img).select('confidence')
         return image.updateMask(image.eq(1))
     # convert images to list
-    fires_list = noaa_viirs.toList(count)
+    fires_list = suomi_viirs.toList(count)
     masked_images = fires_list.map(mask_confident)
     merged_image = ee.ImageCollection(masked_images).mosaic()
 
@@ -59,9 +66,18 @@ else:
         ee.Geometry.Rectangle([-125, 42, -100, 50]),  # WA/MT/ID/WY
         ee.Geometry.Rectangle([-100, 42, -80, 50])    # Midwest
     ]
+
+    def attach_admin_info(feature):
+        county = counties.filterBounds(feature.geometry()).first()
+        city = cities.filterBounds(feature.geometry()).first()
+        return feature \
+            .set('county_name', ee.Algorithms.If(county, county.get('NAME'), None)) \
+            .set('city_name', ee.Algorithms.If(city, city.get('NAME'), None))
     
-    timestamp = datetime.now().strftime("%Y%m%d")
-    all_features = []
+    #timestamp = datetime.now().strftime("%Y%m%d")
+    #all_features = []
+
+
     # fetch data
     for i, tile in enumerate(tiles):
         print(f"Exporting tile {i+1}/{len(tiles)}...")
@@ -74,6 +90,7 @@ else:
         scale=1000,
         maxPixels=1e13
     )
+    fire_vectors_with_address = fire_vectors.map(attach_admin_info)
 
     # define file path on GCS
     file_name = f"RT_fire_data/fires_tile_{i+1}_{timestamp}.geojson"
