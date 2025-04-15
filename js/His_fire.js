@@ -14,37 +14,44 @@ export async function loadHistoricalLayer(map, year) {
   }
 }
 
+// display historical wildfire data on special date
 export function updateFireLayer(map, day) {
   if (!currentYear || !allFeatures[currentYear]) return;
 
   const features = allFeatures[currentYear].filter(f => {
     const date = new Date(f.properties.timestamp);
+    // calculate date
     const dayOfYear = Math.floor(
       (date - new Date(date.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24)
     );
-    return dayOfYear === day;
+    return dayOfYear === parseInt(day);
   });
-
-  if (currentLayer) map.removeLayer(currentLayer);
-
+    // rendering if there's data
     if (features.length > 0) {
-    currentLayer = L.geoJSON(features, {
-      pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-        radius: 3,
-        fillColor: 'orange',
-        color: 'darkred',
-        weight: 0.5,
-        fillOpacity: 0.7
+        if (currentLayer){
+            map.removeLayer(currentLayer);
+        }
+
+        currentLayer = L.geoJSON(features, {
+            pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+                radius: 3,
+                fillColor: 'orange',
+                color: 'darkred',
+                weight: 0.5,
+                fillOpacity: 0.7
       }),
       onEachFeature: (feature, layer) => {
         const ts = feature.properties.timestamp;
         const count = feature.properties.count ?? 'N/A';
-        layer.bindPopup(`🔥 Fire on ${ts}<br>Count: ${count}`);
+        layer.bindPopup(`Fire on ${ts}<br>Count: ${count}`);
       }
     }).addTo(map);
 
-    map.fitBounds(currentLayer.getBounds());
+    if (currentLayer.getLayers().length>0){
+        map.fitBounds(currentLayer.getBounds());
+    }
   } else {
+    //if there's no data, just give hint, not remove the layer
     console.warn("No fire points for selected day.");
   }
 }
