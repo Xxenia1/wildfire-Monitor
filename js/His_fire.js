@@ -1,4 +1,6 @@
 // historical fires visualization
+console.log("✅ His_fire.js loaded successfully");
+
 let currentYear = null;
 let allFeatures = {};  // Cache for each year's data
 let currentLayer = null;
@@ -49,6 +51,9 @@ export function updateFireLayer(map, day) {
   }
 }
 
+console.log("✅ His_fire.js loaded");
+
+
 export function initializeHistoricalControls(map) {
     const yearSelector = document.getElementById('year-selector');
     const timeSlider = document.getElementById('time-slider');
@@ -69,5 +74,5 @@ export function initializeHistoricalControls(map) {
       updateFireLayer(map, day);
     });
   }
-  
+
   
