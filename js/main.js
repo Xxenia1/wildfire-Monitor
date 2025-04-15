@@ -1,20 +1,24 @@
 // import each mode
 import { addRealtimeLayer } from './RT_fire.js';
-import { initializeHistoricalControls } from './His_fire.js';
+import { initializeHistoricalControls, removeHistoricalLayer } from './His_fire.js';
 
 // Initialize the map
 var map = L.map('map').setView([39.8283, -98.5795], 5); // Center at a CA view
 
-// Add OpenStreetMap as the basemap
+// basemap
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '© OpenStreetMap contributors © CARTO',
     subdomains: 'abcd',
     maxZoom: 19
 }).addTo(map);
 
+// fire mode
 // initialize historical fire controls (time slider)
 initializeHistoricalControls(map);
+addRealtimeLayer(map); // default load
 
-
-// default loading fire mode
-addRealtimeLayer(map);
+// bind click to real-time fire button
+document.getElementById('realtime-btn').addEventListener('click', () =>{
+  removeHistoricalLayer(map); //remove historical fire layer
+  addRealtimeLayer(map); // return to real-time fire layer
+});

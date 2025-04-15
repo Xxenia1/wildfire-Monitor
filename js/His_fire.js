@@ -93,4 +93,14 @@ export function initializeHistoricalControls(map) {
     console.log("his_fire.js is loaded");
   }
 
+//add remove layer function
+export function removeHistoricalLayer(map) {
+    if (currentLayer) {
+      map.removeLayer(currentLayer);
+      currentLayer = null;
+      console.log("Historical layer removed");
+    }
+}
+  
+
   
