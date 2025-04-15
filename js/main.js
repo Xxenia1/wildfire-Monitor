@@ -12,7 +12,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19
 }).addTo(map);
 
-// initialize historical fire controls (year + slider)
+// initialize historical fire controls (time slider)
 initializeHistoricalControls(map);
 
 

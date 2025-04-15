@@ -29,6 +29,7 @@ body {
   align-items: center;
   gap: 12px;
   padding: 10px;
+  margin : 10px;
   background: #f5f5f5;
   border-radius: 8px;
 }
@@ -39,4 +40,6 @@ body {
 
 #slider-date-label {
   font-weight: bold;
+  min-width: 80px;
+  display: inline-block;
 }

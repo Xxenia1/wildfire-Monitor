@@ -27,31 +27,40 @@ export function updateFireLayer(map, day) {
 
   if (currentLayer) map.removeLayer(currentLayer);
 
-  currentLayer = L.geoJSON(features, {
-    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-      radius: 3,
-      fillColor: 'orange',
-      color: 'darkred',
-      weight: 0.5,
-      fillOpacity: 0.7
-    }),
-    onEachFeature: (feature, layer) => {
-      const ts = feature.properties.timestamp;
-      const count = feature.properties.count ?? 'N/A';
-      layer.bindPopup(`🔥 Fire on ${ts}<br>Count: ${count}`);
-    }
-  }).addTo(map);
+    if (features.length > 0) {
+    currentLayer = L.geoJSON(features, {
+      pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+        radius: 3,
+        fillColor: 'orange',
+        color: 'darkred',
+        weight: 0.5,
+        fillOpacity: 0.7
+      }),
+      onEachFeature: (feature, layer) => {
+        const ts = feature.properties.timestamp;
+        const count = feature.properties.count ?? 'N/A';
+        layer.bindPopup(`🔥 Fire on ${ts}<br>Count: ${count}`);
+      }
+    }).addTo(map);
 
-  if (currentLayer.getLayers().length > 0) {
     map.fitBounds(currentLayer.getBounds());
   } else {
     console.warn("No fire points for selected day.");
   }
 }
 
-console.log("✅ His_fire.js loaded");
+console.log(" His_fire.js loaded");
 
+function dayOfYearToDate(year, dayOfYear) {
+    const date = new Date(year, 0);
+    date.setDate(dayOfYear);
+    return date;
+}
 
+function formatDateLabel(date) {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+  
 export function initializeHistoricalControls(map) {
     const yearSelector = document.getElementById('year-selector');
     const timeSlider = document.getElementById('time-slider');
@@ -61,16 +70,20 @@ export function initializeHistoricalControls(map) {
       const year = e.target.value;
       loadHistoricalLayer(map, year).then(() => {
         timeSlider.value = 1;
-        sliderLabel.innerText = `Day 1`;
+        const date = dayOfYearToDate(year,1);
+        sliderLabel.innerText = formatDateLabel(date);
         updateFireLayer(map, 1);
       });
     };
   
     timeSlider.addEventListener('input', () => {
       const day = timeSlider.value;
-      sliderLabel.innerText = `Day ${day}`;
+      const date = dayOfYearToDate(currentYear, day);
+      sliderLabel.innerText = formatDateLabel(date);
       updateFireLayer(map, day);
     });
+
+    console.log("his_fire.js is loaded");
   }
 
   
