@@ -49,34 +49,25 @@ export function updateFireLayer(map, day) {
   }
 }
 
-
-
 export function initializeHistoricalControls(map) {
-    const yearSelect = document.getElementById('year-selector');
+    const yearSelector = document.getElementById('year-selector');
     const timeSlider = document.getElementById('time-slider');
-    const sliderDateLabel = document.getElementById('slider-date-label');
+    const sliderLabel = document.getElementById('slider-date-label');
   
-    if (!yearSelect || !timeSlider || !sliderDateLabel) {
-      console.warn("Historical control elements not found in DOM.");
-      return;
-    }
-  
-    yearSelect.onchange = async (e) => {
+    yearSelector.onchange = (e) => {
       const year = e.target.value;
-      await loadHistoricalLayer(map, year);
-  
-      // Reset the slider range
-      timeSlider.min = 1;
-      timeSlider.max = 365;
-      timeSlider.value = 1;
-      sliderDateLabel.innerText = `Day ${timeSlider.value}`;
-  
-      updateFireLayer(map, parseInt(timeSlider.value));
+      loadHistoricalLayer(map, year).then(() => {
+        timeSlider.value = 1;
+        sliderLabel.innerText = `Day 1`;
+        updateFireLayer(map, 1);
+      });
     };
   
     timeSlider.addEventListener('input', () => {
-      sliderDateLabel.innerText = `Day ${timeSlider.value}`;
-      updateFireLayer(map, parseInt(timeSlider.value));
+      const day = timeSlider.value;
+      sliderLabel.innerText = `Day ${day}`;
+      updateFireLayer(map, day);
     });
   }
+  
   

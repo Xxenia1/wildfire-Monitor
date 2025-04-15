@@ -1,6 +1,6 @@
 // import each mode
 import { addRealtimeLayer } from './RT_fire.js';
-import { initializeHistoricalControls } from './His_fire.js';
+import {  initializeHistoricalControls } from './His_fire.js';
 
 // Initialize the map
 var map = L.map('map').setView([39.8283, -98.5795], 5); // Center at a CA view
