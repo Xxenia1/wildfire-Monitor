@@ -1,6 +1,4 @@
 // historical fires visualization
-console.log("✅ His_fire.js loaded successfully");
-
 let currentYear = null;
 let allFeatures = {};  // Cache for each year's data
 let currentLayer = null;
