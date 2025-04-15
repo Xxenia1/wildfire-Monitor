@@ -64,56 +64,86 @@ function removeRealtimeLayer(map) {
 }
 
 // visualize his-fire (2019~2025)
-// Add Historical Fire Data Layer
-function loadHistoricalLayer(map, year) {
-  removeRealtimeLayer(map);
-  if (historicalLayer) {
-    map.removeLayer(historicalLayer);
-  }
+// connects dropdown-year selection with a time slider to filter fire points
 
-  const url = `https://storage.googleapis.com/wildfire-monitor-data/fire_data/fire_data_${year}.geojson.geojson`;
-  fetch(url)
-    .then(res => res.json())
-    .then(data => {
-      historicalLayer = L.geoJSON(data, {
-        pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-          radius: 3,
-          fillColor: 'orange',
-          color: '#cc5500',
-          weight: 0.5,
-          fillOpacity: 0.7
-        }),
-        onEachFeature: (feature, layer) => {
-          const count = feature.properties.count ?? 'N/A';
-          layer.bindPopup(`📅 ${year} Historical Fire<br>Count: ${count}`);
-        }
-      }).addTo(map);
-      map.fitBounds(historicalLayer.getBounds());
-      console.log(`Historical fire data for ${year} loaded`);
-    })
-    .catch(err => {
-      console.error(`Failed to load historical fire data for ${year}:`, err);
-    });
+let currentYear = null;
+let allFeatures = {};  // Cache for each year's data
+let currentLayer = null;
+
+// DOM references
+const yearSelect = document.getElementById('year-selector');
+const timeSlider = document.getElementById('time-slider');
+const sliderDateLabel = document.getElementById('slider-date-label');
+
+if (timeSlider && sliderDateLabel) {
+  timeSlider.addEventListener('input', () => {
+    sliderDateLabel.innerText = `Day ${timeSlider.value}`;
+    
+  });
+} else {
+  console.warn(" Time slider or label not found in DOM.");
 }
 
-// Remove Historical Layer
-function removeHistoricalLayer(map) {
-  if (historicalLayer) {
-    map.removeLayer(historicalLayer);
-    historicalLayer = null;
-    console.log("Historical layer removed");
-  }
-}
-
-// UI Interaction
 export function initializeFireModeControls(map) {
   document.getElementById('realtime-btn').onclick = () => {
+    removeHistoricalLayer(map);
     addRealtimeLayer(map);
   };
 
-  document.getElementById('year-selector').onchange = (e) => {
+  yearSelect.onchange = async (e) => {
     const year = e.target.value;
-    loadHistoricalLayer(map, year);
+    currentYear = year;
+
+    if (!allFeatures[year]) {
+      const url = `https://storage.googleapis.com/wildfire-monitor-data/fire_data/fire_data_${year}.geojson.geojson`;
+      const res = await fetch(url);
+      const data = await res.json();
+      allFeatures[year] = data.features;
+    }
+
+    // Reset slider to selected year range
+    timeSlider.min = `${year}-01-01`;
+    timeSlider.max = `${year}-12-31`;
+    timeSlider.value = `${year}-01-01`;
+    sliderDateLabel.innerText = timeSlider.value;
+
+    updateFireLayer(map, timeSlider.value);
   };
+
+  timeSlider.addEventListener('input', () => {
+    sliderDateLabel.innerText = timeSlider.value;
+    updateFireLayer(map, timeSlider.value);
+  });
 }
 
+function updateFireLayer(map, selectedDate) {
+  if (!currentYear || !allFeatures[currentYear]) return;
+  const features = allFeatures[currentYear].filter(f =>
+    f.properties.timestamp.startsWith(selectedDate)
+  );
+
+  if (currentLayer) map.removeLayer(currentLayer);
+  currentLayer = L.geoJSON(features, {
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+      radius: 3,
+      fillColor: 'orange',
+      color: 'darkred',
+      weight: 0.5,
+      fillOpacity: 0.7
+    }),
+    onEachFeature: (feature, layer) => {
+      const ts = feature.properties.timestamp;
+      const count = feature.properties.count ?? 'N/A';
+      layer.bindPopup(`🔥 Fire on ${ts}<br>Count: ${count}`);
+    }
+  }).addTo(map);
+  map.fitBounds(currentLayer.getBounds());
+}
+
+function removeHistoricalLayer(map) {
+  if (currentLayer) {
+    map.removeLayer(currentLayer);
+    currentLayer = null;
+    console.log("Historical layer removed");
+  }
+}

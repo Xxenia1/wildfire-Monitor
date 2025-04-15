@@ -12,9 +12,8 @@
     <div id="title-panel">California Wildfire Monitor Dashboard</div>
     <div id="main-content">
         <div id="map"></div>
-        <div id="fire-controls" style="margin-top: 10px;">
+        <div class="fire-control-group">
             <button id="realtime-btn"> Real-time Fire</button>
-      
             <select id="year-selector">
               <option value="">Select Year</option>
               <option value="2019">2019</option>
@@ -25,6 +24,10 @@
               <option value="2024">2024</option>
               <option value="2025">2025</option>
             </select>
+          
+            <label for="time-slider">Date:</label>
+            <input type="range" id="time-slider" min="1" max="365" value="1" step="1">
+            <span id="slider-date-label">Day 1</span>
           </div>
         </div>
 
