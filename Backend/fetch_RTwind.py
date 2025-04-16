@@ -35,8 +35,10 @@ H.inventory() # look at GRIB2 file contents
 # %%
 H.inventory(r":[U|V]GRD:10 m above")
 
+subset_path = H.download(r":[U|V]GRD:10 m above", verbose=True)
+
 # %%
-file_path = "/Users/xeniax/data/hrrr/20250310/subset_47ef391b__hrrr.t00z.wrfsfcf00.grib2"
+file_path = f"/your/custom/path/{today}/subset_wind_{today}.grib2"
 ds = xr.open_dataset(file_path, engine="cfgrib")
 print(ds)
 
