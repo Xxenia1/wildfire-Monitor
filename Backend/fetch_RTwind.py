@@ -46,7 +46,7 @@ print(ds)
 mySubset = H.download(r":[U|V]GRD:10 m above", verbose=True)
 mySubset
 # %% read subset
-subset_file = "/Users/xeniax/data/hrrr/20250310/subset_47ef391b_hrrr.t00z.wrfsfcf00.grib2"
+#subset_file = "/Users/xeniax/data/hrrr/20250310/subset_47ef391b_hrrr.t00z.wrfsfcf00.grib2"
 #open dataset
 #ds = xr.open_dataset(subset_file, engine="cfgrib")
 #print(ds)
