@@ -15,15 +15,14 @@ from google.cloud import storage
 # california = ee.FeatureCollection("TIGER/2018/States") \
 #             .filter(ee.Filter.eq("NAME", "California"))
 
-# %%
-# Get today's date in YYYYMMDD format
-today = datetime.datetime.utcnow().strftime("%Y%m%d")
+# %% Get today's date in YYYYMMDD format
+today = datetime.utcnow().strftime("%Y%m%d")
 
-# create temporary dictionary for file download
+# %% create temporary dictionary for file download
 temp_dir = tempfile.mkdtemp()
 print(f"[INFO] Temporary directory created at: {temp_dir}")
 
-# Fetch the latest HRRR surface data using Herbie
+# %% Fetch the latest HRRR surface data using Herbie
 H = Herbie(
     date=today,   # Use today's date
     model="hrrr",
@@ -32,12 +31,18 @@ H = Herbie(
     save_dir=temp_dir #temporary file dictionary
 )
 
-# only download 10m wind U/V components
-subset_path = H.download(r":[U|V]GRD:10 m above", verbose=True)
+#
+inv = H.inventory(r":[U|V]GRD:10 m above")
+print(inv)
+
+# %%only download 10m wind U/V components
+subset_path = H.download(":UGRD:10 m above ground:anl", verbose=True)
+
+#subset_path = H.download(r":[U|V]GRD:10 m above", verbose=True)
 
 # Open dataset and crop to California + Pacific coast 
 ds = xr.open_dataset(subset_path, engine="cfgrib")
-# set CA boundary box + + westward ocean buffer
+# %%set CA boundary box + + westward ocean buffer
 lat_min, lat_max = 31, 43
 lon_min, lon_max = -127, -113
 
