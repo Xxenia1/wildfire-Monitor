@@ -1,0 +1,31 @@
+# automating the "fetch realtime wind data" script everyday.
+name: Auto Fetch Wind and Fire Data
+
+on:
+  schedule:
+    - cron: '30 2 * * *'  # 每天 UTC 时间 2:30 执行一次
+  workflow_dispatch:       # 手动触发也可运行
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v3
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install dependencies
+        run: |
+          pip install herbie-data cfgrib xarray numpy google-cloud-storage earthengine-api
+
+      - name: 🌬️ Fetch wind data
+        run: python Backend/fetch_RTwnd.py
+
+      # - name: 🔥 Fetch fire data (currently disabled due to credentials issue)
+      #   run: python Backend/fetch_RTfire.py
+
