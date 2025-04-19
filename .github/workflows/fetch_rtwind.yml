@@ -11,21 +11,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout repository
+      - name:  Checkout repository
         uses: actions/checkout@v3
 
-      - name: 🐍 Set up Python
+      - name:  Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      - name: 📦 Install dependencies
+      - name:  Install dependencies
         run: |
           pip install herbie-data cfgrib xarray numpy google-cloud-storage earthengine-api
 
-      - name: 🌬️ Fetch wind data
+      - name:  Fetch wind data
         run: python Backend/fetch_RTwnd.py
 
-      # - name: 🔥 Fetch fire data (currently disabled due to credentials issue)
+      # - name: Fetch fire data (currently disabled due to credentials issue)
       #   run: python Backend/fetch_RTfire.py
 

@@ -6,10 +6,20 @@
     <title>Wildfire-Monitor Dashboard</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="css/style.css">
+
+    <!-- Leaflet Core -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+    <!-- Polyline Decorator -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.1.0/leaflet.polylineDecorator.min.js"></script>
+    <!-- D3 -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 </head>
 <body>
     <div id="title-panel">California Wildfire Monitor Dashboard</div>
+    <div id = "mode-buttons">
+      <button id = "wind-btn">Wind</button>
+    </div>
     <div id="main-content">
         <div id="map"></div>
         <div class="fire-control-group">
@@ -31,6 +41,7 @@
             <span id="slider-date-label">Day 1</span>
           </div>
         </div>
+
 
     </div>
     <script type="module" src="js/main.js"></script>
