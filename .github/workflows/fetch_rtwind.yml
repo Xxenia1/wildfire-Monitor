@@ -1,4 +1,4 @@
-# automating the "fetch realtime wind data" script everyday.
+# automating the "fetch realtime wind data" script everyday. 需要改，写完再改
 name: Auto Fetch Wind and Fire Data
 
 on:
@@ -21,7 +21,7 @@ jobs:
 
       - name:  Install dependencies
         run: |
-          pip install herbie-data cfgrib xarray numpy google-cloud-storage earthengine-api
+          pip install herbie-data cfgrib xarray numpy google-cloud-storage 
 
       - name:  Fetch wind data
         run: python Backend/fetch_RTwnd.py
