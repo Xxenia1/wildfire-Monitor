@@ -95,4 +95,10 @@ bucket = client.bucket(bucket_name)
 blob = bucket.blob(destination_blob_name)
 blob.upload_from_filename(json_path)
 print(f"Uploaded to GCS: gs://{bucket_name}/{destination_blob_name}")
+# %% clean up temp file
+import shutil
+# remove the temp directory and all its contents
+shutil.rmtree(temp_dir)
+print(f" Temporary directory deleted: {temp_dir}")
+
 # %%
