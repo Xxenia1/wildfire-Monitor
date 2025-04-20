@@ -23,41 +23,52 @@ export async function renderWindMode(map) {
 
 // Render arrow layer given wind data
 export function renderWindLayer(map, windData) {
-  if (windLayerGroup) {
-    map.removeLayer(windLayerGroup); //remove previous layer if exist
+    // Remove previous wind layer if exists
+    if (windLayerGroup) {
+      map.removeLayer(windLayerGroup);
+    }
+  
+    windLayerGroup = L.layerGroup();
+  
+    windData.forEach((entry) => {
+      const uVal = entry.u10;
+      const vVal = entry.v10;
+      const lat = entry.latitude;
+      const lon = entry.longitude;
+  
+      if (uVal == null || vVal == null || lat == null || lon == null) return; // skip invalid
+  
+      // Compute wind speed and direction angle
+      const speed = Math.sqrt(uVal ** 2 + vVal ** 2);
+      const angle = (Math.atan2(vVal, uVal) * 180) / Math.PI;
+  
+      // Construct arrow using polylineDecorator
+      const arrow = L.polylineDecorator(
+        L.polyline([[lat, lon], [lat, lon]]),
+        {
+          patterns: [
+            {
+              offset: '100%',
+              repeat: 0,
+              symbol: L.Symbol.arrowHead({
+                pixelSize: 8 + speed,
+                pathOptions: {
+                  color: 'blue',
+                  fillOpacity: 0.6,
+                  weight: 1,
+                },
+              }),
+            },
+          ],
+        }
+      );
+  
+      windLayerGroup.addLayer(arrow);
+    });
+  
+    windLayerGroup.addTo(map);
   }
-
-  windLayerGroup = L.layerGroup();
-
-  windData.u.forEach((uVal, i) => {
-    const vVal = windData.v[i];
-    const lat = windData.latitude[i];
-    const lon = windData.longitude[i];
-    // Compute angle and speed of wind vector
-    const speed = Math.sqrt(uVal ** 2 + vVal ** 2);
-    const angle = (Math.atan2(vVal, uVal) * 180) / Math.PI;
-    // create arrow
-    const arrow = L.polylineDecorator(
-      L.polyline([[lat, lon], [lat, lon]]),
-      {
-        patterns: [
-          {
-            offset: '100%',
-            repeat: 0,
-            symbol: L.Symbol.arrowHead({
-              pixelSize: 8 + speed,
-              pathOptions: { color: 'blue', fillOpacity: 0.6, weight: 1 }
-            })
-          }
-        ]
-      }
-    );
-
-    windLayerGroup.addLayer(arrow);
-  });
-
-  windLayerGroup.addTo(map);
-}
+  
 // Optional cleanup function (removes wind layer)
 export function removeWindLayer(map) {
   if (windLayerGroup) {
