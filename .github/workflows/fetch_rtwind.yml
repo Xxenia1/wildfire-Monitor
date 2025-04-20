@@ -1,31 +1,38 @@
 # automating the "fetch realtime wind data" script everyday. 需要改，写完再改
-name: Auto Fetch Wind and Fire Data
+name: auto fetch wind data
 
 on:
+  workflow_dispatch:  
   schedule:
-    - cron: '30 2 * * *' 
-  workflow_dispatch:       
+    - cron: '0 12 * * *'  # UTC 12:00pm everyday
 
 jobs:
-  fetch:
+  upload-wind-json:
     runs-on: ubuntu-latest
 
     steps:
-      - name:  Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name:  Set up Python
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name:  Install dependencies
+      - name: Install dependencies
         run: |
-          pip install herbie-data cfgrib xarray numpy google-cloud-storage 
+          pip install xarray numpy requests google-cloud-storage
 
-      - name:  Fetch wind data
-        run: python Backend/fetch_RTwnd.py
+      - name: Authenticate to Google Cloud
+        run: |
+          echo "${{ secrets.GEE_CREDENTIALS }}" > key.json
+          export GOOGLE_APPLICATION_CREDENTIALS="key.json"
+          gcloud auth activate-service-account --key-file=key.json
+          gcloud config set project canvas-radio-444702-k2
 
-      # - name: Fetch fire data (currently disabled due to credentials issue)
-      #   run: python Backend/fetch_RTfire.py
+      - name: Run wind fetch and upload script
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: key.json
+        run: |
+          python Backend/fetch_RTwind.py
 
