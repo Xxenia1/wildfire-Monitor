@@ -2,10 +2,12 @@
 
 # %%
 import os
+import math
 import xarray as xr
 import numpy as np
 import requests
 import json
+import shutil
 import tempfile
 from datetime import datetime,timedelta
 
@@ -66,23 +68,42 @@ print(" u10 valid count:", xr.where(ds_cropped["u10"].notnull(), 1, 0).sum().ite
 print(" v10 valid count:", xr.where(ds_cropped["v10"].notnull(), 1, 0).sum().item())
 
 # %% create json
-u10 = ds_cropped["u10"].values.tolist()
-v10 = ds_cropped["v10"].values.tolist()
+# u10 = ds_cropped["u10"].values.tolist()
+# v10 = ds_cropped["v10"].values.tolist()
+
+# %% replace NaN
+def replace_nan(arr):
+    return [[None if np.isnan(v) else float(v) for v in row] for row in arr]
+
+u10_clean = replace_nan(ds_cropped["u10"].values)
+v10_clean = replace_nan(ds_cropped["v10"].values)
 lat_out = ds_cropped["latitude"].values.tolist()
 lon_out = ds_cropped["longitude"].values.tolist()
+
 
 # create json structure
 json_path = os.path.join(temp_dir, f"{date_str}_wind.json")
 
 wind_json = {
     "date": date_str,
-    "u10": u10,
-    "v10": v10,
+    "u10": u10_clean,
+    "v10": v10_clean,
     "latitude": lat_out,
     "longitude": lon_out
 }
 with open(json_path, "w") as f:
     json.dump(wind_json, f)
+
+# %% check json before upload
+with open(json_path, "r") as f:
+    content = f.read()
+    if "NaN" in content:
+        print("[ JSON still contains NaN. Fix the replacement logic.")
+    elif "null" in content:
+        print("[ JSON contains null values. Safe for upload.")
+    else:
+        print(" JSON clean.")
+
 # %% upload to GCS
 from google.cloud import storage
 client = storage.Client()
@@ -96,8 +117,6 @@ blob = bucket.blob(destination_blob_name)
 blob.upload_from_filename(json_path)
 print(f"Uploaded to GCS: gs://{bucket_name}/{destination_blob_name}")
 # %% clean up temp file
-import shutil
-# remove the temp directory and all its contents
 shutil.rmtree(temp_dir)
 print(f" Temporary directory deleted: {temp_dir}")
 
