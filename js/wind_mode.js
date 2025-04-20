@@ -1,85 +1,69 @@
 // visualization of wind mode
-let windLayerGroup;
+let windLayer = null;
 
 // Main entry point: fetch today's JSON file and render the wind arrows
-export async function renderWindMode(map) {
+export function renderWindLayer(map) {
+  if (windLayer) {
+    map.removeLayer(windLayer);
+  }
+
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
   const dd = String(today.getDate()).padStart(2, '0');
   const filename = `${yyyy}${mm}${dd}_wind.json`;
 
-  // Construct the full GCS URL for today's file
   const url = `https://storage.googleapis.com/wildfire-monitor-data/wind/${filename}`;
+  //fetch data
+  fetch(url)
+    .then(response => {
+      if (!response.ok) throw new Error('Failed to fetch wind data');
+      return response.json();
+    })
+    .then(windData => {
+      const u10 = windData.u10;
+      const v10 = windData.v10;
+      const lats = windData.latitude;
+      const lons = windData.longitude;
 
-  try {
-    const res = await fetch(url);
-    const data = await res.json(); // { u: [...], v: [...] }
-  
-    const u = data.u;
-    const v = data.v;
-  
-    if (Array.isArray(u) && Array.isArray(v) && u.length === v.length) {
-      
-      const windArray = u.map((row, i) => {
-        return row.map((uVal, j) => {
-          return [uVal, v[i][j]];
-        });
-      });
-  
-      renderWindLayer(windArray); 
-    } else {
-      console.error("Invalid wind data format:", data);
-    }
-  } catch (err) {
-    console.error('Failed to load wind data:', err);
-  }  
-}
+      const windMarkers = [];
 
-// Render arrow layer given wind data
-export function renderWindLayer(windData) {
-    if (!Array.isArray(windData)) {
-        console.error("windData is not an array:", windData);
-        return;
-    }
+      for (let i = 0; i < lats.length; i++) {
+        for (let j = 0; j < lons.length; j++) {
+          const u = u10[i][j];
+          const v = v10[i][j];
+          const lat = lats[i];
+          const lon = lons[j];
 
-    // 假设 windData 是一个二维数组，每个元素是 [u, v]
-    windData.forEach((row, latIdx) => {
-        if (!Array.isArray(row)) return;
+          if (u === null || v === null) continue;
+          if (lat < -90 || lat > 90 || lon < -180 || lon > 180) continue; 
 
-        row.forEach((windVal, lonIdx) => {
-            if (Array.isArray(windVal) && windVal.length === 2) {
-                const [u, v] = windVal;
+          const angle = Math.atan2(v, u) * (180 / Math.PI);
 
-                if (!isNaN(u) && !isNaN(v)) {
-                    // 计算箭头角度和强度
-                    const angle = Math.atan2(v, u);
-                    const speed = Math.sqrt(u * u + v * v);
+          const icon = L.divIcon({
+            className: 'wind-icon',
+            html: `<div class="wind-arrow" style="transform: rotate(${angle}deg)"></div>`,
+            iconSize: [12, 12],
+            iconAnchor: [6, 6],
+          });
 
-                    // 计算该箭头的地理坐标（根据你的格网和范围调整）
-                    const lon = -130 + lonIdx * 0.25; // 举例：从 -130° 开始每格 0.25°
-                    const lat = 50 - latIdx * 0.25;   // 举例：从 50°N 开始向下每格 0.25°
+          const marker = L.marker([lat, lon], { icon });
+          windMarkers.push(marker);
+        }
+      }
 
-                    // 添加箭头（使用 Leaflet Polyline 或 SVG 渲染）
-                    const arrow = L.polyline([
-                        [lat, lon],
-                        [lat + 0.1 * v, lon + 0.1 * u]
-                    ], {
-                        color: 'blue',
-                        weight: 1,
-                        opacity: 0.7
-                    }).addTo(map);
-                }
-            }
-        });
+      windLayer = L.layerGroup(windMarkers).addTo(map);
+      console.log(`Rendered ${windMarkers.length} wind markers.`);
+    })
+    .catch(error => {
+      console.error(" Failed to load wind data:", error);
     });
 }
 
-  
 // Optional cleanup function (removes wind layer)
 export function removeWindLayer(map) {
-  if (windLayerGroup) {
-    map.removeLayer(windLayerGroup);
-    windLayerGroup = null;
+  if (windLayer) {
+    map.removeLayer(windLayer);
+    windLayer = null;
   }
 }
