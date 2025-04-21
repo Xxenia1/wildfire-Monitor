@@ -1,50 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wildfire-Monitor Dashboard</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <link rel="stylesheet" href="css/style.css">
-
-    <!-- Leaflet Core -->
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-
-    <!-- Polyline Decorator -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.1.0/leaflet.polylineDecorator.min.js"></script>
-    <!-- D3 -->
-    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-</head>
-<body>
-    <div id="title-panel">California Wildfire Monitor Dashboard</div>
-    <div id = "mode-buttons">
-      <button id = "wind-btn">Wind</button>
-    </div>
-    <div id="main-content">
-        <div id="map"></div>
-        <div class="fire-control-group">
-            <button id="realtime-btn"> Real-time Fire</button>
-            
-            <select id="year-selector">
-              <option value="">Select Year</option>
-              <option value="2019">2019</option>
-              <option value="2020">2020</option>
-              <option value="2021">2021</option>
-              <option value="2022">2022</option>
-              <option value="2023">2023</option>
-              <option value="2024">2024</option>
-              <option value="2025">2025</option>
-            </select>
-          
-            <label for="time-slider">Date:</label>
-            <input type="range" id="time-slider" min="1" max="365" value="1" step="1">
-            <span id="slider-date-label">Day 1</span>
-          </div>
-        </div>
-
-
-    </div>
-    <script type="module" src="js/main.js"></script>
-
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite App</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>
