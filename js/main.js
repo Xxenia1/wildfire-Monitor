@@ -25,7 +25,7 @@ document.getElementById('realtime-btn').addEventListener('click', () =>{
   addRealtimeLayer(map); // return to real-time fire layer
 });
 
-// Wind button
+// bind Wind button
 document.getElementById('wind-btn').addEventListener('click', () => {
   removeHistoricalLayer(map);
   removeWindLayer(map);

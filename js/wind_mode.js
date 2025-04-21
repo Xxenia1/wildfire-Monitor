@@ -3,8 +3,15 @@ let windLayer = null;
 
 // Main entry point: fetch today's JSON file and render the wind arrows
 export function renderWindLayer(map) {
+  console.log('renderWindLayer triggered');
+
+  if (!map) {
+    console.error('map is null or undefined');
+    return;
+  }
   if (windLayer) {
     map.removeLayer(windLayer);
+    windLayer=null;
   }
 
   const today = new Date();
@@ -14,13 +21,15 @@ export function renderWindLayer(map) {
   const filename = `${yyyy}${mm}${dd}_wind.json`;
 
   const url = `https://storage.googleapis.com/wildfire-monitor-data/wind/${filename}`;
+  console.log(` Fetching wind data from: ${url}`);
   //fetch data
   fetch(url)
     .then(response => {
-      if (!response.ok) throw new Error('Failed to fetch wind data');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.json();
     })
     .then(windData => {
+      console.log('[DEBUG] Wind data loaded:', windData);
       const u10 = windData.u10;
       const v10 = windData.v10;
       const lats = windData.latitude;
@@ -43,8 +52,6 @@ export function renderWindLayer(map) {
           const icon = L.divIcon({
             className: 'wind-icon',
             html: `<div class="wind-arrow" style="transform: rotate(${angle}deg)"></div>`,
-            iconSize: [12, 12],
-            iconAnchor: [6, 6],
           });
 
           const marker = L.marker([lat, lon], { icon });
@@ -52,7 +59,8 @@ export function renderWindLayer(map) {
         }
       }
 
-      windLayer = L.layerGroup(windMarkers).addTo(map);
+      windLayer = L.layerGroup(windMarkers);
+      windLayer.addTo(map);
       console.log(`Rendered ${windMarkers.length} wind markers.`);
     })
     .catch(error => {
