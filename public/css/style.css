@@ -28,8 +28,13 @@ body {
   cursor: pointer;
 }
 
-#mode-buttons button:hover {
-  background-color: #ddd;
+#mode-buttons button:hover,
+.fire-control-group button:hover {
+  background: #0056b3;
+}
+
+#mode-buttons .active {
+  background: #469cf8;
 }
 
 
