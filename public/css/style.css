@@ -67,16 +67,93 @@ body {
   transform-origin: center center;
 }
 
-.leaflet-popup-content {
-  font-family: Arial, sans-serif;
-  font-size: 13px;
-  line-height: 1.4;
+/* ——  Legend —— */
+.leaflet-control.legend {
+  background: white;
+  padding: 8px;
+  font-size: 14px;
+  line-height: 1.2;
+  color: #333;
+  border-radius: 5px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+}
+.legend table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.legend td, .legend th {
+  padding: 4px;
+  text-align: left;
+  vertical-align: middle;
+}
+.legend .color-box {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  margin-right: 6px;
+  border: 1px solid #999;
 }
 
-.leaflet-popup-content b {
-  font-size: 15px;
-  color: #222;
+/* —— Popup structure & graph hover —— */
+.smoke-popup {
+  font-family: sans-serif;
+  line-height: 1.4;
 }
+.smoke-popup .title {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+.smoke-popup .aqi-number {
+  font-size: 24px;
+  font-weight: bold;
+  text-shadow:
+    1px  1px 2px black,
+    -1px  1px 2px black,
+    1px -1px 2px black,
+    -1px -1px 2px black;
+}
+.smoke-popup .aqi-desc {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.smoke-popup .histogram {
+  width: 200px; height: 60px;
+  background: #eee;
+  position: relative;
+  margin: 6px 0;
+  cursor: pointer;
+}
+.smoke-popup .histogram-bar {
+  position: absolute;
+  bottom: 0;
+  width: 10px;
+  background: rgba(0,0,0,0.5);
+}
+.smoke-popup .gauge {
+  font-size: 14px;
+  margin: 4px 0;
+}
+.smoke-popup .recommendation {
+  font-style: italic;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+/* l2 hover tooltip */
+.hist-tooltip {
+  position: absolute;
+  background: white;
+  border: 1px solid #666;
+  padding: 4px 6px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+
+
+
 
 #time-slider {
   width: 180px;

@@ -1,85 +1,128 @@
-// smoke_mode.js
+// public/js/smoke_mode.js
 const smokeLayer = L.layerGroup();
-// 1. 在你的 main.js 调用这个函数，并确保 map 已经初始化
-export function initSmokeMode(map) {
-  smokeLayer.clearLayers();
-  if (!map.hasLayer(smokeLayer)) {
-    smokeLayer.addTo(map);
+
+//AQI color mappig
+function getAqiColor(aqi) {
+  if (aqi <= 50)   return '#00e400';   // Good
+  if (aqi <= 100)  return '#ffff00';   // Moderate
+  if (aqi <= 150)  return '#ff7e00';   // Unhealthy for Sensitive Groups
+  if (aqi <= 200)  return '#ff0000';   // Unhealthy
+  if (aqi <= 300)  return '#8f3f97';   // Very Unhealthy
+                   return '#7e0023';   // Hazardous
+}
+//size of markers
+function getRadius(aqi) {
+  return 4 + Math.min(aqi / 25, 6);
+}
+function getCategoryName(catNum) {
+  switch(catNum) {
+    case 1: return 'Good';
+    case 2: return 'Moderate';
+    case 3: return 'Unhealthy for Sensitive';
+    case 4: return 'Unhealthy';
+    case 5: return 'Very Unhealthy';
+    case 6: return 'Hazardous';
+    default: return 'Unknown';
   }
-  // render data
-  fetchSmokeData(smokeLayer);
-
-
-  // 设置地图视野到加州边界
-  const caBounds = [
-    [32.53, -124.48],  // southwest  (lat, lng)
-    [42.01, -114.13]   // northeast
-  ];
-  map.fitBounds(caBounds);
-
-  // 如果你想每隔一段时间自动刷新，可取消下面注释：
-  // setInterval(() => fetchSmokeData(smokeLayer), 30 * 60 * 1000); // 30 分钟一次
 }
 
-function fetchSmokeData(smokeLayer) {
-  const API_KEY = '2900B648-68DC-4DA9-8912-108C4DC5B87A';
-  const BBOX    = '-124.48,32.53,-114.13,42.01';  // 加州经纬度范围：minLon,minLat,maxLon,maxLat
-  const PARAMS  = 'PM25';                        // 也可以加 PM10, OZONE 等，用逗号分隔
-  const FORMAT  = 'application/json';
+// popup content
+function showSmokeDetails(map, obs, latlng) {
+  const html = `
+    <div style="max-width:300px; font-family:Arial,sans-serif;">
+      <h3 style="margin:0 0 .5em;">Unit Details</h3>
+      <p style="margin:0 .5em .3em;"><strong>Location:</strong> ${obs.SiteName}</p>
+      <p style="margin:0 .5em .3em;"><strong>Type:</strong> ${obs.AgencyName || 'N/A'}</p>
+      <p style="margin:0 .5em .3em;"><strong>Pollutant:</strong> ${obs.Parameter}</p>
+      <p style="margin:0 .5em .3em;"><strong>Time (UTC):</strong> ${obs.UTC}</p>
+      <p style="margin:0 .5em .3em;"><strong>AQI:</strong> ${obs.AQI} (${getCategoryName(obs.Category)})</p>
+      <p style="margin:0 .5em .8em;"><strong>Raw Conc.:</strong> ${obs.RawConcentration}</p>
+      <button id="smoke-detail-close" style="display:block;margin:0 auto;padding:.5em 1em;">Close</button>
+    </div>
+  `;
+  const popup = L.popup({ maxWidth: 320 })
+    .setLatLng(latlng)
+    .setContent(html)
+    .openOn(map);
 
-  // 用今天的日期，拉取从 00:00 到 23:59 的当日数据
-  const today = new Date().toISOString().slice(0,10);
-  const start = `${today}T00-00-00`;
-  const end   = `${today}T23-59-59`;
+  document.getElementById('smoke-detail-close')
+    .addEventListener('click', () => map.closePopup(popup));
+}
 
-  const url = `https://www.airnowapi.org/aq/observation/bbox/`
-    + `?format=${FORMAT}`
-    + `&parameters=${PARAMS}`
-    + `&BBOX=${BBOX}`
-    + `&dataType=A`             // A = AQI
-    + `&startDate=${start}`
-    + `&endDate=${end}`
-    + `&API_KEY=${API_KEY}`;
+//initialize smoke layer
+export function initSmokeMode(map) {
+  //fly to CA
+  map.flyTo([36.7783, -119.4179], 6, { duration: 1.2 });
+  const y = new Date(Date.now()-86400e3);
+  const d = y.toISOString().slice(0,10).replace(/-/g,'');
+  
+  const url = `https://storage.googleapis.com/wildfire-monitor-data/smoke_contours/${d}_PM25_data.json`;
 
   fetch(url)
-    .then(res => {
-      if (!res.ok) throw new Error(`AirNow API error: ${res.status}`);
-      return res.json();
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
     })
     .then(data => {
-      smokeLayer.clearLayers();
       data.forEach(obs => {
-        const { Latitude, Longitude, AQI, ParameterName, ReportingArea } = obs;
-        const color = getAqiColor(AQI);
-
-        // 用 circleMarker 更易于展示
-        const marker = L.circleMarker([Latitude, Longitude], {
-          radius: 6,
-          fillColor: color,
-          color: '#333',
+        const lat = obs.Latitude;
+        const lng = obs.Longitude;
+        const aqi = obs.AQI;
+        const cat = obs.Category;
+        const marker = L.circleMarker([lat, lng], {
+          radius: getRadius(aqi),      //size
+          
+          fillColor: getAqiColor(aqi), //
+          fillOpacity: 0.8,
+          stroke: true,
+          color: '#000000',
           weight: 1,
-          fillOpacity: 0.8
+        }).addTo(map);
+
+        const summary = `
+          <div style="font-family:Arial,sans-serif;">
+            <strong>${obs.SiteName}</strong><br>
+            Time: ${obs.UTC}<br>
+            Pollutant: ${obs.Parameter}<br>
+            AQI: <span style="font-weight:bold;">${aqi}</span> (${getCategoryName(cat)})<br>
+            <a href="#" class="view-smoke-detail">View Details</a>
+          </div>
+        `;
+        marker.bindPopup(summary);
+
+        marker.on('popupopen', () => {
+          const link = document.querySelector('.view-smoke-detail');
+          if (link) {
+            link.addEventListener('click', e => {
+              e.preventDefault();
+              showSmokeDetails(map, obs, marker.getLatLng());
+            });
+          }
         });
-
-        // 弹窗：地点名称 + AQI
-        marker.bindPopup(`
-          <strong>${ReportingArea}</strong><br/>
-          污染物: ${ParameterName}<br/>
-          AQI: ${AQI}
-        `);
-
-        smokeLayer.addLayer(marker);
       });
     })
-    .catch(err => console.error(err));
+    .catch(err => {
+      console.error('Failed to load smoke data:', err);
+      alert('Error loading smoke layer. See console.');
+    });
 }
 
-// 根据常见 AQI 分级返回颜色
-function getAqiColor(aqi) {
-  if (aqi <= 50)  return '#00e400'; // 良好
-  if (aqi <= 100) return '#ffff00'; // 轻度
-  if (aqi <= 150) return '#ff7e00'; // 中度
-  if (aqi <= 200) return '#ff0000'; // 重度
-  if (aqi <= 300) return '#8f3f97'; // 严重
-  return '#7e0023';              // 危害
+// add Legend
+export function addSmokeLegend(map) {
+  const legend = L.control({ position: 'bottomright' });
+  legend.onAdd = () => {
+    const div = L.DomUtil.create('div', 'smoke-legend');
+    div.style.background = 'white';
+    div.style.padding = '6px';
+    div.style.boxShadow = '0 0 6px rgba(0,0,0,0.3)';
+    div.innerHTML = '<b>AQI Legend</b><br>' +
+      [ [0,50,'Good'], [51,100,'Moderate'], [101,150,'Unhealthy for Sensitive'],
+        [151,200,'Unhealthy'], [201,300,'Very Unhealthy'], [301,500,'Hazardous'] ]
+      .map(([min,max,label]) =>
+        `<i style="background:${getAqiColor(min)};width:12px;height:12px;display:inline-block;margin-right:6px;"></i>`+
+        `${min}-${max} ${label}`
+      ).join('<br>');
+    return div;
+  };
+  legend.addTo(map);
 }

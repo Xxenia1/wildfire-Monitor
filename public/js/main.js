@@ -1,8 +1,8 @@
 // import each mode
-import { addRealtimeLayer } from './RT_fire.js';
+import { addRealtimeLayer, removeRealtimeLayer } from './RT_fire.js';
 import { initializeHistoricalControls, removeHistoricalLayer } from './His_fire.js';
 import { renderWindLayer, removeWindLayer } from './wind_mode.js';
-import { initSmokeMode } from './smoke_mode.js';
+import { initSmokeMode, addSmokeLegend  } from './smoke_mode.js';
 
 // Initialize the map
 var map = L.map('map').setView([39.8283, -98.5795], 5); // Center at a CA view
@@ -28,6 +28,7 @@ document.getElementById('realtime-btn').addEventListener('click', () =>{
 // bind Wind button
 document.getElementById('wind-btn').addEventListener('click', () => {
   removeHistoricalLayer(map);
+  removeRealtimeLayer(map);
   removeWindLayer(map);
   renderWindLayer(map); 
 });
@@ -35,9 +36,11 @@ document.getElementById('wind-btn').addEventListener('click', () => {
 //bind smoke button
 document.getElementById('smoke-btn').addEventListener('click', () => {
   removeHistoricalLayer(map);
+  removeRealtimeLayer(map);
   removeWindLayer(map);
   // load smoke mode
   initSmokeMode(map);
+  addSmokeLegend(map);
 });
 
 //activate status
