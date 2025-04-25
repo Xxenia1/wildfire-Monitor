@@ -1,11 +1,13 @@
 # %%
 import requests
+import time
 import os
 import json
 import shutil
 import tempfile
 from datetime import datetime,timedelta
 from google.cloud import storage
+from zoneinfo import ZoneInfo
 # configration
 API_KEY = '2900B648-68DC-4DA9-8912-108C4DC5B87A'
 BBOX    = '-124.48,32.53,-114.13,42.01'
@@ -15,28 +17,37 @@ BUCKET_NAME = "wildfire-monitor-data"
 DEST_FOLDER = 'smoke_contours'
 # %% fetch data
 def fetch_smoke_data():
-    dt = datetime.utcnow() - timedelta(days=1)
-    date_str = dt.strftime('%Y-%m-%d')
+    now_ca = datetime.now(ZoneInfo("America/Los_Angeles"))
+    yesterday_ca = now_ca - timedelta(days=1)
+    date_str = yesterday_ca.strftime("%Y-%m-%d")
     start = f"{date_str}T00"
     end   = f"{date_str}T23"
-
     url = (
         "https://www.airnowapi.org/aq/data/"
         f"?startDate={start}"
         f"&endDate={end}"
         f"&parameters=PM25"
         f"&BBOX={BBOX}"
-        f"&dataType=B"               # B = both AQI & Concentration
+        f"&dataType=A"               # AQI 
         f"&format=application/json"
         f"&verbose=1"
         f"&monitorType=0"            # 0=Permanent monitors
         f"&includerawconcentration=1"
         f"&API_KEY={API_KEY}"
     )
-    print(f"[{datetime.utcnow()}] Fetching: {url}")
-    resp = requests.get(url)
-    resp.raise_for_status()
-    return resp.json()
+    print(f"[DEBUG] CA now: {now_ca} → fetching for: {date_str}")
+    
+    for attempt in range(3):
+        try:
+            resp = requests.get(url, timeout=60)
+            resp.raise_for_status()
+            return resp.json()
+        except requests.exceptions.RequestException as e:
+            print(f"[WARN] attempt {attempt+1} failed:", e)
+            if attempt < 2:
+                time.sleep(5*(attempt+1))
+            else:
+                raise
 
 
 # %% upload to GCS

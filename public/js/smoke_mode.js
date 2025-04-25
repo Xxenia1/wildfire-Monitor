@@ -53,15 +53,22 @@ function showSmokeDetails(map, obs, latlng) {
 export function initSmokeMode(map) {
   //fly to CA
   map.flyTo([36.7783, -119.4179], 6, { duration: 1.2 });
-  const y = new Date(Date.now()-86400e3);
-  const d = y.toISOString().slice(0,10).replace(/-/g,'');
+  // delete previous map layer if exists
+  if (map._smokeLayer) {
+    map.removeLayer(map._smokeLayer);
+  }
+  // calculate yesterday's date
+  const now = new Date();
+  now.setUTCHours(now.getUTCHours() - 4);   
+  now.setUTCDate(now.getUTCDate() - 1);     
+  const dateStr = now.toISOString().slice(0,10).replace(/-/g,'');
   
-  const url = `https://storage.googleapis.com/wildfire-monitor-data/smoke_contours/${d}_PM25_data.json`;
+  const url = `https://storage.googleapis.com/wildfire-monitor-data/smoke_contours/${dateStr}_PM25_data.json`;
 
   fetch(url)
     .then(r => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json();
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      return r.json()
     })
     .then(data => {
       data.forEach(obs => {
