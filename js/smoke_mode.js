@@ -12,7 +12,7 @@ function getAqiColor(aqi) {
   if (aqi <= 300)  return '#8f3f97';   // Very Unhealthy
                    return '#7e0023';   // Hazardous
 }
-//size of markers
+//marker radius
 function getRadius(aqi) {
   return 10 + Math.min(aqi / 25, 6);
 }
@@ -30,67 +30,43 @@ function getCategoryName(catNum) {
 }
 // info control fixed at top-left corner
 const infoControl = L.control({position:'topleft'});
+
 infoControl.onAdd = function(map) {
   this._div = L.DomUtil.create('div', 'info-box');
-  this.update();
+  this._div.innerHTML = '<h4> Click a Station</h4>';
+  //this.update(); //default
   return this._div;
 };
 
-infoControl.update = function(props) {
-  if (!props) {
+infoControl.update = function(obs) {
+  if (!obs) {
     this._div.innerHTML = '<h4>Click a station</h4>';
   } else {
-    const loc = props.SiteName || props.AgencyName || 'Unknown';
-    const aqiText = props.AQI != null
-      ? `${props.AQI} (${getCategoryName(props.AQI)})`
-      : 'N/A';
     this._div.innerHTML = `
       <h4>Unit Details</h4>
-      <b>Location:</b> ${loc}<br/>
-      <b>Pollutant:</b> ${props.Parameter}<br/>
-      <b>Time (UTC):</b> ${props.UTC}<br/>
-      <b>AQI:</b> ${aqiText}
+      <b>Location:</b> ${obs.SiteName}/ ${obs.AgencyName}<br/>
+      <b>Pollutant:</b> ${obs.Parameter}<br/>
+      <b>Time (UTC):</b> ${obs.UTC}<br/>
+      <b>AQI:</b> ${obs.AQI} (${obs.getCategoryName})<br/>
     `;
   }
 };
-// popup content
-function showSmokeDetails(map, obs, latlng) {
-  const locationLabel = obs.SiteName || obs.AgencyName || 'Unknown Site';
-  const agencyLabel  = obs.AgencyName || 'N/A';
-
-  const html = `
-    <div style="max-width:300px; font-family:Arial,sans-serif;">
-      <h3 style="margin:0 0 .5em;">Unit Details</h3>
-      <p style="margin:0 .5em .3em;"><strong>Location / Agency:</strong> ${locationLabel} / ${agencyLabel}</p>
-      <p style="margin:0 .5em .3em;"><strong>Pollutant:</strong> ${obs.Parameter}</p>
-      <p style="margin:0 .5em .3em;"><strong>Time (UTC):</strong> ${obs.UTC}</p>
-      <p style="margin:0 .5em .3em;"><strong>AQI:</strong> ${obs.AQI} (${getCategoryName(obs.Category)})</p>
-      <p style="margin:0 .5em .8em;"><strong>Raw Conc.:</strong> ${obs.RawConcentration}</p>
-      <button id="smoke-detail-close" style="display:block;margin:0 auto;padding:.5em 1em;">Close</button>
-    </div>
-  `;
-  const popup = L.popup({ maxWidth: 320 })
-    .setLatLng(latlng)
-    .setContent(html)
-    .openOn(map);
-
-  document.getElementById('smoke-detail-close')
-    .addEventListener('click', () => map.closePopup(popup));
-}
 
 //initialize smoke layer
 export function initSmokeMode(map) {
-  //fly to CA
+  //fly to CA view
   map.flyTo([36.7783, -119.4179], 6, { duration: 1.2 });
+
   // delete previous map layer if exists
   if (map._smokeLayer) map.removeLayer(map._smokeLayer);
 
   //add control to map
   infoControl.addTo(map);
-  const layer = L.layerGroup().addTo(map);
-  map._smokeLayer = layer;
-  
 
+  //create new layer group
+  const layerGroup = L.layerGroup().addTo(map);
+  map._smokeLayer = layerGroup;
+  
   // calculate CA's time
   const nowPac = new Date().toLocaleString('en-US', {
     timeZone:'America/Los_Angeles'
@@ -104,7 +80,7 @@ export function initSmokeMode(map) {
   const startDate = `${YYYY}-${MM}-${DD}T00`;
   const endDate   = `${YYYY}-${MM}-${DD}T${hh}`;
 
-  
+  // request URL
   const url = [
     'https://www.airnowapi.org/aq/data/',
     `?startDate=${startDate}`,
@@ -118,59 +94,48 @@ export function initSmokeMode(map) {
     `&API_KEY=${API_KEY}`
   ].join('');
 
+  // fetch data, create points on map, and bind event
   fetch(url)
     .then(r => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`)
       return r.json()
     })
     .then(data => {
+
+      console.log('sample smoke date:', data[0]);
+
       data.forEach(obs => {
+        
         const lat = obs.Latitude;
         const lng = obs.Longitude;
         const aqi = obs.AQI;
-        const cat = obs.Category;
+        //const catNum = obs.Category;
+
         const marker = L.circleMarker([lat, lng], {
-          radius: getRadius(aqi),      //size
-          
-          fillColor: getAqiColor(aqi), //
+          radius: getRadius(aqi),      
+          fillColor: getAqiColor(aqi), 
           fillOpacity: 0.8,
-          stroke: true,
+          //stroke: true,
           color: '#000000',
           weight: 1,
-        }).addTo(map);
+        }).addTo(layerGroup);
 
-        const summary = `
-          <div style="font-family:Arial,sans-serif;">
-            <strong>${obs.SiteName}</strong><br>
-            Time: ${obs.UTC}<br>
-            Pollutant: ${obs.Parameter}<br>
-            AQI: <span style="font-weight:bold;">${aqi}</span> (${getCategoryName(cat)})<br>
-            <a href="#" class="view-smoke-detail">View Details</a>
-          </div>
-        `;
-        marker.bindPopup(summary);
-
-        marker.on('popupopen', () => {
-          const link = document.querySelector('.view-smoke-detail');
-          if (link) {
-            link.addEventListener('click', e => {
-              e.preventDefault();
-              showSmokeDetails(map, obs, marker.getLatLng());
-            });
-          }
+        // update control
+        marker.on('click', () => {
+          infoControl.update(obs);
         });
       });
     })
     .catch(err => {
       console.error('Failed to load smoke data:', err);
       alert('Error loading smoke layer. See console.');
-      console.log('✅ initSmokeMode called', map, bbox);
     });
 }
 
 // add Legend
 export function addSmokeLegend(map) {
   const legend = L.control({ position: 'bottomright' });
+
   legend.onAdd = () => {
     const div = L.DomUtil.create('div', 'smoke-legend');
     div.style.background = 'white';
