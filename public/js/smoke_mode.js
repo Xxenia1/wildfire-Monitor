@@ -3,7 +3,7 @@ const smokeLayer = L.layerGroup();
 const CA = '-124.48,32.53,-114.13,42.01';
 const API_KEY = '2900B648-68DC-4DA9-8912-108C4DC5B87A'; 
 
-//AQI color mappig
+//AQI color mappig by category
 function getAqiColor(aqi) {
   if (aqi <= 50)   return '#00e400';   // Good
   if (aqi <= 100)  return '#ffff00';   // Moderate
@@ -16,6 +16,7 @@ function getAqiColor(aqi) {
 function getRadius(aqi) {
   return 10 + Math.min(aqi / 25, 6);
 }
+// AQI category name helper
 function getCategoryName(catNum) {
   switch(catNum) {
     case 1: return 'Good';
@@ -27,14 +28,40 @@ function getCategoryName(catNum) {
     default: return 'Unknown';
   }
 }
+// info control fixed at top-left corner
+const infoControl = L.control({position:'topleft'});
+infoControl.onAdd = function(map) {
+  this._div = L.DomUtil.create('div', 'info-box');
+  this.update();
+  return this._div;
+};
 
+infoControl.update = function(props) {
+  if (!props) {
+    this._div.innerHTML = '<h4>Click a station</h4>';
+  } else {
+    const loc = props.SiteName || props.AgencyName || 'Unknown';
+    const aqiText = props.AQI != null
+      ? `${props.AQI} (${getCategoryName(props.AQI)})`
+      : 'N/A';
+    this._div.innerHTML = `
+      <h4>Unit Details</h4>
+      <b>Location:</b> ${loc}<br/>
+      <b>Pollutant:</b> ${props.Parameter}<br/>
+      <b>Time (UTC):</b> ${props.UTC}<br/>
+      <b>AQI:</b> ${aqiText}
+    `;
+  }
+};
 // popup content
 function showSmokeDetails(map, obs, latlng) {
+  const locationLabel = obs.SiteName || obs.AgencyName || 'Unknown Site';
+  const agencyLabel  = obs.AgencyName || 'N/A';
+
   const html = `
     <div style="max-width:300px; font-family:Arial,sans-serif;">
       <h3 style="margin:0 0 .5em;">Unit Details</h3>
-      <p style="margin:0 .5em .3em;"><strong>Location:</strong> ${obs.SiteName}</p>
-      <p style="margin:0 .5em .3em;"><strong>Type:</strong> ${obs.AgencyName || 'N/A'}</p>
+      <p style="margin:0 .5em .3em;"><strong>Location / Agency:</strong> ${locationLabel} / ${agencyLabel}</p>
       <p style="margin:0 .5em .3em;"><strong>Pollutant:</strong> ${obs.Parameter}</p>
       <p style="margin:0 .5em .3em;"><strong>Time (UTC):</strong> ${obs.UTC}</p>
       <p style="margin:0 .5em .3em;"><strong>AQI:</strong> ${obs.AQI} (${getCategoryName(obs.Category)})</p>
@@ -58,8 +85,11 @@ export function initSmokeMode(map) {
   // delete previous map layer if exists
   if (map._smokeLayer) map.removeLayer(map._smokeLayer);
 
+  //add control to map
+  infoControl.addTo(map);
   const layer = L.layerGroup().addTo(map);
   map._smokeLayer = layer;
+  
 
   // calculate CA's time
   const nowPac = new Date().toLocaleString('en-US', {
