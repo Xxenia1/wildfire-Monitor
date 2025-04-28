@@ -164,6 +164,7 @@ export function initSmokeMode(map) {
     .catch(err => {
       console.error('Failed to load smoke data:', err);
       alert('Error loading smoke layer. See console.');
+      console.log('✅ initSmokeMode called', map, bbox);
     });
 }
 
