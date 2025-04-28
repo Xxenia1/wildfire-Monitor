@@ -41,6 +41,7 @@ document.getElementById('smoke-btn').addEventListener('click', () => {
   // load smoke mode
   initSmokeMode(map);
   addSmokeLegend(map);
+  
 });
 
 //activate status

@@ -1,5 +1,7 @@
 // public/js/smoke_mode.js
 const smokeLayer = L.layerGroup();
+const CA = '-124.48,32.53,-114.13,42.01';
+const API_KEY = '2900B648-68DC-4DA9-8912-108C4DC5B87A'; 
 
 //AQI color mappig
 function getAqiColor(aqi) {
@@ -12,7 +14,7 @@ function getAqiColor(aqi) {
 }
 //size of markers
 function getRadius(aqi) {
-  return 4 + Math.min(aqi / 25, 6);
+  return 10 + Math.min(aqi / 25, 6);
 }
 function getCategoryName(catNum) {
   switch(catNum) {
@@ -54,16 +56,37 @@ export function initSmokeMode(map) {
   //fly to CA
   map.flyTo([36.7783, -119.4179], 6, { duration: 1.2 });
   // delete previous map layer if exists
-  if (map._smokeLayer) {
-    map.removeLayer(map._smokeLayer);
-  }
-  // calculate yesterday's date
-  const now = new Date();
-  now.setUTCHours(now.getUTCHours() - 4);   
-  now.setUTCDate(now.getUTCDate() - 1);     
-  const dateStr = now.toISOString().slice(0,10).replace(/-/g,'');
+  if (map._smokeLayer) map.removeLayer(map._smokeLayer);
+
+  const layer = L.layerGroup().addTo(map);
+  map._smokeLayer = layer;
+
+  // calculate CA's time
+  const nowPac = new Date().toLocaleString('en-US', {
+    timeZone:'America/Los_Angeles'
+  });
+  const now    = new Date(nowPac);
+  const YYYY   = now.getFullYear();
+  const MM     = String(now.getMonth()+1).padStart(2,'0');
+  const DD     = String(now.getDate()).padStart(2,'0');
+  const hh     = String(now.getHours()).padStart(2,'0');
+
+  const startDate = `${YYYY}-${MM}-${DD}T00`;
+  const endDate   = `${YYYY}-${MM}-${DD}T${hh}`;
+
   
-  const url = `https://storage.googleapis.com/wildfire-monitor-data/smoke_contours/${dateStr}_PM25_data.json`;
+  const url = [
+    'https://www.airnowapi.org/aq/data/',
+    `?startDate=${startDate}`,
+    `&endDate=${endDate}`,
+    `&parameters=PM25`,
+    `&BBOX=${CA}`,
+    `&dataType=A`,
+    `&format=application/json`,
+    `&monitorType=0`,
+    `&includeRawConcentration=1`,
+    `&API_KEY=${API_KEY}`
+  ].join('');
 
   fetch(url)
     .then(r => {
