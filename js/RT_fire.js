@@ -19,11 +19,11 @@ export async function addRealtimeLayer(map) {
     const latestFile = geojsonFiles[0].name;
     const fileUrl = `https://storage.googleapis.com/wildfire-monitor-data/${latestFile}`;
 
-    console.log(" Latest real-time fire data:", fileUrl);
+    //console.log(" Latest real-time fire data:", fileUrl);
 
     const geojsonRes = await fetch(fileUrl);
     const data = await geojsonRes.json();
-    console.log("Sample feature properties:", data.features[0].properties);
+    //console.log("Sample feature properties:", data.features[0].properties);
 
     realtimeLayer = L.geoJSON(data, {
       pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
@@ -40,9 +40,9 @@ export async function addRealtimeLayer(map) {
     }).addTo(map);
 
     map.fitBounds(realtimeLayer.getBounds());
-    console.log(" Real-time fire layer added");
+    //console.log(" Real-time fire layer added");
   } catch (err) {
-    console.error(" Failed to load real-time fire data:", err);
+    //console.error(" Failed to load real-time fire data:", err);
   }
 }
 
@@ -50,7 +50,7 @@ export function removeRealtimeLayer(map) {
   if (realtimeLayer) {
     map.removeLayer(realtimeLayer);
     realtimeLayer = null;
-    console.log("Real-time layer removed");
+    //console.log("Real-time layer removed");
   }
 }
 

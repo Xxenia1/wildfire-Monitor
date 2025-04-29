@@ -1,5 +1,5 @@
 // public/js/smoke_mode.js
-const smokeLayer = L.layerGroup();
+//const smokeLayer = L.layerGroup();
 const CA = '-124.48,32.53,-114.13,42.01';
 const API_KEY = '2900B648-68DC-4DA9-8912-108C4DC5B87A'; 
 
@@ -17,7 +17,7 @@ function getRadius(aqi) {
   return 10 + Math.min(aqi / 25, 6);
 }
 // AQI category name helper
-function getCategoryName(catNum) {
+function getCategoryName(catNum) { 
   switch(catNum) {
     case 1: return 'Good';
     case 2: return 'Moderate';
@@ -28,28 +28,86 @@ function getCategoryName(catNum) {
     default: return 'Unknown';
   }
 }
+
 // info control fixed at top-left corner
 const infoControl = L.control({position:'topleft'});
 
 infoControl.onAdd = function(map) {
-  this._div = L.DomUtil.create('div', 'info-box');
-  this._div.innerHTML = '<h4> Click a Station</h4>';
-  //this.update(); //default
+  this._div = L.DomUtil.create('div', 'info-box' );
+  this._div.style.zIndex = 10000;
+  this._div.style.display = 'none';
   return this._div;
 };
 
 infoControl.update = function(obs) {
   if (!obs) {
-    this._div.innerHTML = '<h4>Click a station</h4>';
-  } else {
+    this._div.innerHTML = '';
+    this._div.style.display = 'none';   
+    return;
+  } 
+
+    this._div.style.display = 'block';         
+    this._div.classList.remove('expanded');
+  
+    //set background color
+    const bg = getAqiColor(obs.AQI);
+    this._div.style.background = bg;
+    
+    // text and label
+    let recommendation = '';
+    switch (obs.Category) {
+      case 1: recommendation = 'Good time to go outdoors'; break;
+      case 2: recommendation = 'Unusually sensitive people consider reducing outdoor activity; go inside to cleaner air if you have symptoms.'; break;
+      case 3: recommendation = 'Sensitive groups should take precaution by reducing outdoor activity; go inside to cleaner air if you have symptoms.'; break;
+      case 4: recommendation = 'Everyone should take precaution by reducing outdoor activity; go inside to cleaner air if you have symptoms.'; break;
+      case 5: recommendation = 'Stay indoors.'; break;
+      case 6: recommendation = 'Stay indoors.'; break;
+      default: recommendation = 'Air quality advisory';
+    }
+
+    // build content
+    const name = obs.SiteName || obs.AgencyName || 'Unknown';
+    const aqi = obs.AQI || 0;
+    const cat   = obs.Category || 1;
+    const label = getCategoryName(cat);
+    const rec = recommendation;
+
+    //build inner html 
     this._div.innerHTML = `
-      <h4>Unit Details</h4>
-      <b>Location:</b> ${obs.SiteName}/ ${obs.AgencyName}<br/>
-      <b>Pollutant:</b> ${obs.Parameter}<br/>
-      <b>Time (UTC):</b> ${obs.UTC}<br/>
-      <b>AQI:</b> ${obs.AQI} (${obs.getCategoryName})<br/>
+      <div class="info-grid">
+      <div class="info-left">
+        <div class="name-box">${name}</div>
+      </div>
+      <div class="info-right">
+        <div class="aqi-subtext">PM2.5 AQI</div>
+        <div class="aqi-value">${aqi}</div>
+        <div class="aqi-label">${label}</div>
+      </div>
+    </div>
+    <div class="rec-box">${rec}</div>
+    <div class="info-actions">
+      <button id="btn-expand" class="btn-action">Expand</button>
+      <button id="btn-close" class="btn-action">Close</button>
+    </div>
+    <div class="fire-section">
+      <div class="fire-box">
+        <a href="#" id="link-fires">No Nearby Fires Detected</a>
+      </div>
+    </div>
     `;
-  }
+
+    //bind events
+    this._div.querySelector('#btn-close').onclick = () => infoControl.update();
+    this._div.querySelector('#btn-expand').onclick = () => {
+      console.log('expand clicked');
+      this._div.classList.toggle('expanded');
+    };
+    this._div.querySelector('#link-fires').onclick = e => {e.preventDefault();
+      // 三级弹窗逻辑占位
+    /*
+    showNearbyFiresDialog(obs);
+    */
+  };
 };
 
 //initialize smoke layer
@@ -85,10 +143,11 @@ export function initSmokeMode(map) {
     'https://www.airnowapi.org/aq/data/',
     `?startDate=${startDate}`,
     `&endDate=${endDate}`,
-    `&parameters=PM25`,
+    `&parameters=PM25`, //pollutants
     `&BBOX=${CA}`,
     `&dataType=A`,
     `&format=application/json`,
+    "&verbose=1",
     `&monitorType=0`,
     `&includeRawConcentration=1`,
     `&API_KEY=${API_KEY}`
@@ -109,7 +168,9 @@ export function initSmokeMode(map) {
         const lat = obs.Latitude;
         const lng = obs.Longitude;
         const aqi = obs.AQI;
-        //const catNum = obs.Category;
+        const catNum = obs.Category;
+        const catLabel = getCategoryName(catNum);
+        //console.log('catLabel is', catLabel);
 
         const marker = L.circleMarker([lat, lng], {
           radius: getRadius(aqi),      
@@ -117,7 +178,7 @@ export function initSmokeMode(map) {
           fillOpacity: 0.8,
           //stroke: true,
           color: '#000000',
-          weight: 1,
+          weight: 0.5,
         }).addTo(layerGroup);
 
         // update control
@@ -132,8 +193,23 @@ export function initSmokeMode(map) {
     });
 }
 
+// stub: 根据 fire mode 逻辑展示 Nearby Fires 弹窗
+function showNearbyFires(obs) {
+  // TODO: 集成 fire_mode.js 中的弹窗逻辑
+  alert('Show nearby fires for ' + (obs.SiteName || obs.AgencyName));
+}
+function showSmokePlume(obs) {
+  // TODO: 集成 smoke plume 逻辑
+  alert('Show smoke plume for ' + (obs.SiteName || obs.AgencyName));
+}
+
 // add Legend
+let smokeLegendControl = null;
 export function addSmokeLegend(map) {
+  //remove the previous one if exists
+  if (smokeLegendControl) {
+    map.removeControl(smokeLegendControl);
+  }
   const legend = L.control({ position: 'bottomright' });
 
   legend.onAdd = () => {

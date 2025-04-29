@@ -52,11 +52,11 @@ export function updateFireLayer(map, day) {
     }
   } else {
     //if there's no data, just give hint, not remove the layer
-    console.warn("No fire points for selected day.");
+    //console.warn("No fire points for selected day.");
   }
 }
 
-console.log(" His_fire.js loaded");
+//console.log(" His_fire.js loaded");
 
 function dayOfYearToDate(year, dayOfYear) {
     const date = new Date(year, 0);
@@ -90,7 +90,7 @@ export function initializeHistoricalControls(map) {
       updateFireLayer(map, day);
     });
 
-    console.log("his_fire.js is loaded");
+    //console.log("his_fire.js is loaded");
   }
 
 //add remove layer function
@@ -98,7 +98,7 @@ export function removeHistoricalLayer(map) {
     if (currentLayer) {
       map.removeLayer(currentLayer);
       currentLayer = null;
-      console.log("Historical layer removed");
+      //console.log("Historical layer removed");
     }
 }
   
