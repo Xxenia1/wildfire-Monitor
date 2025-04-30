@@ -211,4 +211,13 @@ body {
   color: #000;
 }
 
+/*----wind mode----*/
 
+.wind-arrow {
+  width: 0;
+  height: 0;
+  border: 8px solid transparent;
+  border-bottom-color: rgba(0,0,0,0.7);
+  /* 让箭头尖端朝上，再由 JS 的 rotate 调整方向 */
+  transform-origin: 50% 50%;
+}
