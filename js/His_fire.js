@@ -1,7 +1,9 @@
 // historical fires visualization
+
 let currentYear = null;
 let allFeatures = {};  // Cache for each year's data
 let currentLayer = null;
+
 
 export async function loadHistoricalLayer(map, year) {
   currentYear = year;

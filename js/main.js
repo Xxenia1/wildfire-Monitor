@@ -6,7 +6,7 @@ import { initSmokeMode, addSmokeLegend } from './smoke_mode.js';
 import { initNdviMode } from './ndvi_mode.js';
 
 // ----------------- Wait until DOM is ready -----------------
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async() => {
   // 1. Initialize map
   const map = L.map('map').setView([39.8283, -98.5795], 5);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
