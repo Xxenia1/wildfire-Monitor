@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', async() => {
     removeHistoricalLayer(map);
     removeWindLayer(map);
     removeSmokeLayer(map);
+  
   }
   
 
@@ -72,6 +73,7 @@ document.addEventListener('DOMContentLoaded', async() => {
     hideAllPanels();
     initSmokeMode(map);
     addSmokeLegend(map);
+    
   });
 
   // 8. NDVI mode

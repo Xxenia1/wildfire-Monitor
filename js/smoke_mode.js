@@ -222,6 +222,7 @@ export function addSmokeLegend(map) {
   legend.addTo(map);
 }
 
+
 // remove layer
 export function removeSmokeLayer(map) {
   if (smokeLayerGroup) {
@@ -238,3 +239,6 @@ export function removeSmokeLayer(map) {
     map.removeControl(infoControl);
   }
 }
+
+
+
