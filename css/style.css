@@ -258,4 +258,30 @@ body {
   background-color: #f1f1f1;
 }
 
+#main-container {
+  display: flex;
+  height: calc(100vh - 50px); 
+  width: 100%;
+}
+
+#map {
+  flex: 1; 
+}
+
+#sidebar-content {
+  width: 420px;                        
+  background-color: rgba(255, 255, 255, 0.96);
+  padding: 16px;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+  overflow-y: auto;
+  display: none;
+  z-index: 1000;
+}
+
+#sidebar-content img {
+  width: 100%;
+  margin-bottom: 12px;
+  border-radius: 6px;
+}
+
 

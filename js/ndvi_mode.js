@@ -1,16 +1,24 @@
 // display NDVI gif & line graph
-export function initNdviMode() {
+export function initNdviMode(map) {
     const sidebar = document.getElementById("sidebar-content");
+    if (!sidebar) return;
+
+    sidebar.style.display = 'block';
+    sidebar.innerHTML = ''; 
   
-    // 清空之前的内容（比如之前点过 Smoke 或 Fire）
-    //sidebar.innerHTML = "";
-  
-    // 插入 NDVI GIF
-    const gif = document.createElement("img");
-    gif.src = "Data/daily_ca_ndvi_2024.gif"; // 路径确保正确
-    gif.alt = "California NDVI 2024";
-    gif.style.width = "100%";
-  
-    sidebar.appendChild(gif);
-  }
+    // insert NDVI gif
+    const ndviFiles = [
+        { src: "Data/daily_ca_ndvi_2024.gif", alt: "NDVI Daily 2024" },
+        { src: "Data/ca_ndvi16d_rgb.gif", alt: "NDVI 16-day RGB" },
+        { src: "Data/ca_daily_ndvi_line.gif", alt: "California NDVI Line Animation" }
+      ];
+
+      ndviFiles.forEach(file => {
+        const gif = document.createElement("img");
+        gif.src = file.src;
+        gif.alt = file.alt;
+        sidebar.appendChild(gif);
+    });
+    map.flyTo([37.5, -119], 6, {duration: 2});
+}
   

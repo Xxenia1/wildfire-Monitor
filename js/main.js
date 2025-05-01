@@ -23,13 +23,18 @@ document.addEventListener('DOMContentLoaded', async() => {
   // 3. Helper to hide all panels
   function hideAllPanels() {
     document.getElementById('fire-control-panel').style.display = 'none';
-    document.getElementById('sidebar-content').style.display = 'none';
-    document.getElementById('sidebar-content').innerHTML = '';
+  
+    const sidebar = document.getElementById('sidebar-content');
+    if (sidebar) {
+      sidebar.style.display = 'none';
+      sidebar.innerHTML = '';
+    }
+  
     removeRealtimeLayer(map);
     removeHistoricalLayer(map);
     removeWindLayer(map);
-    // optionally: remove smoke or others
   }
+  
 
   // 4. Dropdown toggle logic
   const modeMenu = document.getElementById('mode-menu');
@@ -71,6 +76,6 @@ document.addEventListener('DOMContentLoaded', async() => {
   // 8. NDVI mode
   document.getElementById('ndvi-btn').addEventListener('click', () => {
     hideAllPanels();
-    initNdviMode();
+    initNdviMode(map);
   });
 });

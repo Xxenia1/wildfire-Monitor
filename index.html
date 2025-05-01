@@ -37,21 +37,21 @@
     <!-- Step 2: Map + Conditional Panels -->
     <div id="main-content" style="display: flex;">
       <div id="map" style="flex: 1;"></div>
+      <!-- Sidebar for NDVI -->
+      <div id="sidebar-content" style=" display: none;"></div>
     </div>
-     <!-- Sidebar for NDVI -->
-    <div id="sidebar-content" style="width: 300px; display: none; padding: 10px;"></div>
     <!-- Step 3: Fire Mode Controls -->
-  <div id="fire-control-panel" style="display: none;">
-    <select id="year-selector">
-      <option value="">Select Year</option>
-      <option value="2019">2019</option>
-      <option value="2020">2020</option>
-      <option value="2021">2021</option>
-      <option value="2022">2022</option>
-      <option value="2023">2023</option>
-      <option value="2024">2024</option>
-      <option value="2025">2025</option>
-    </select>
+    <div id="fire-control-panel" style="display: none;">
+      <select id="year-selector">
+        <option value="">Select Year</option>
+        <option value="2019">2019</option>
+        <option value="2020">2020</option>
+        <option value="2021">2021</option>
+        <option value="2022">2022</option>
+        <option value="2023">2023</option>
+        <option value="2024">2024</option>
+        <option value="2025">2025</option>
+      </select>
     <label for="time-slider">Date:</label>
     <input type="range" id="time-slider" min="1" max="365" value="1" step="1">
     <span id="slider-date-label">Day 1</span>
