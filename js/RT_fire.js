@@ -17,6 +17,7 @@ export async function addRealtimeLayer(map) {
     }
 
     const latestFile = geojsonFiles[0].name;
+    console.log("Latest GeoJSON file fetched:", latestFile);
     const fileUrl = `https://storage.googleapis.com/wildfire-monitor-data/${latestFile}`;
 
     //console.log(" Latest real-time fire data:", fileUrl);
