@@ -82,3 +82,12 @@ document.addEventListener('DOMContentLoaded', async() => {
     initNdviMode(map);
   });
 });
+// welcome box
+window.addEventListener('load', () => {
+  const popup = document.getElementById('welcome-popup');
+  if (popup) {
+    popup.addEventListener('click', () => {
+      popup.style.display = 'none';
+    });
+  }
+});
