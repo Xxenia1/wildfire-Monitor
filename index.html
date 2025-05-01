@@ -21,32 +21,42 @@
 </head>
 <body>
     <div id="title-panel">California Wildfire Monitor Dashboard</div>
-    <div id = "mode-buttons">
-      <button id = "wind-btn">Wind</button>
-      <button id="smoke-btn">Smoke</button>
-      <button id="ndvi-btn">NDVI</button>
+    <!--  Main Mode Dropdown Button -->
+    <div id="mode-dropdown-container">
+      <button id="main-mode-btn">Select Mode</button>
+      <div id="mode-menu" class="dropdown-menu">
+        <button class="dropdown-item" id="fire-btn">Fire</button>
+        <button class="dropdown-item" id="wind-btn">Wind</button>
+        <button class="dropdown-item" id="smoke-btn">Smoke</button>
+        <button class="dropdown-item" id="ndvi-btn">NDVI</button>
+      </div>
     </div>
-    <div id="main-content">
-        <div id="map"></div>
-        <div class="fire-control-group">
-            <button id="realtime-btn"> Real-time Fire</button>
-            
-            <select id="year-selector">
-              <option value="">Select Year</option>
-              <option value="2019">2019</option>
-              <option value="2020">2020</option>
-              <option value="2021">2021</option>
-              <option value="2022">2022</option>
-              <option value="2023">2023</option>
-              <option value="2024">2024</option>
-              <option value="2025">2025</option>
-            </select>
-          
-            <label for="time-slider">Date:</label>
-            <input type="range" id="time-slider" min="1" max="365" value="1" step="1">
-            <span id="slider-date-label">Day 1</span>
-          </div>
-        </div></div>
+    <!-- Step 2: Map + Conditional Panels -->
+    <div id="main-content" style="display: flex;">
+      <div id="map" style="flex: 1;"></div>
+
+        <!-- Sidebar for NDVI -->
+      <div id="sidebar-content" style="width: 300px; display: none; padding: 10px;"></div>
+    </div>
+
+    <!-- Step 3: Fire Mode Controls -->
+  <div id="fire-control-panel" style="display: none;">
+    <button id="realtime-btn">Real-time Fire</button>
+    <select id="year-selector">
+      <option value="">Select Year</option>
+      <option value="2019">2019</option>
+      <option value="2020">2020</option>
+      <option value="2021">2021</option>
+      <option value="2022">2022</option>
+      <option value="2023">2023</option>
+      <option value="2024">2024</option>
+      <option value="2025">2025</option>
+    </select>
+    <label for="time-slider">Date:</label>
+    <input type="range" id="time-slider" min="1" max="365" value="1" step="1">
+    <span id="slider-date-label">Day 1</span>
+  </div>
+    
   <script type="module" src="js/main.js"></script>
 
 </body>

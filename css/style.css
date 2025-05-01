@@ -12,30 +12,6 @@ body {
   padding: 10px 20px;
   font-size: 1.4rem;
 }
-#mode-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin: 10px 0;
-}
-
-#mode-buttons button {
-  padding: 10px 16px;
-  font-weight: bold;
-  background-color: #f0f0f0;
-  border: 1px solid #999;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-#mode-buttons button:hover,
-.fire-control-group button:hover {
-  background: #0056b3;
-}
-
-#mode-buttons .active {
-  background: #469cf8;
-}
 
 
 #main-content {
@@ -222,9 +198,43 @@ body {
   flex: 1;               
   height: 100%;         
 }
-
-/* 如果你想让侧边栏固定 300px 宽，就写： */
-.fire-control-group {
-  width: 300px;
-  flex-shrink: 0;        /* 不跟地图抢宽度 */
+/* —— Mode dropdown —— */
+#mode-dropdown-container {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  z-index: 1000;
 }
+
+#main-mode-btn {
+  padding: 6px 12px;
+  font-size: 14px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  background-color: white;
+  border: 1px solid #aaa;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  margin-top: 5px;
+  width: 160px;
+  z-index: 1001;
+}
+
+.dropdown-item {
+  padding: 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+}
+
+.dropdown-item:hover {
+  background-color: #f1f1f1;
+}
+
+
