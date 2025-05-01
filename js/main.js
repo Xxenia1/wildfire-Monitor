@@ -25,7 +25,7 @@ document.getElementById('realtime-btn').addEventListener('click', () =>{
   addRealtimeLayer(map); // return to real-time fire layer
 });
 
-// bind Wind button
+// ———— bind Wind button ————
 document.getElementById('wind-btn').addEventListener('click', () => {
   removeHistoricalLayer(map);
   removeRealtimeLayer(map);
@@ -33,7 +33,7 @@ document.getElementById('wind-btn').addEventListener('click', () => {
   renderWindLayer(map); 
 });
 
-//bind smoke button
+// ———— bind smoke button ————
 document.getElementById('smoke-btn').addEventListener('click', () => {
   removeHistoricalLayer(map);
   removeRealtimeLayer(map);

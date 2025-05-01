@@ -58,14 +58,7 @@ body {
   background: #f5f5f5;
   border-radius: 8px;
 }
-.wind-arrow {
-  width: 12px;
-  height: 12px;
-  color: #000;
-  opacity: 0.7;
-  clip-path: polygon(0 0, 100% 50%, 0 100%);
-  transform-origin: center center;
-}
+
 
 /**fire mode -- time slider*/
 #time-slider {
@@ -212,12 +205,26 @@ body {
 }
 
 /*----wind mode----*/
-
 .wind-arrow {
   width: 0;
   height: 0;
   border: 8px solid transparent;
   border-bottom-color: rgba(0,0,0,0.7);
-  /* 让箭头尖端朝上，再由 JS 的 rotate 调整方向 */
   transform-origin: 50% 50%;
+}
+
+#main-content {
+  flex: 1;               /* 把 main-content 拉开，让它撑满 body 剩余高度 */
+  display: flex;         /* 左右两块并排 */
+}
+
+#map {
+  flex: 1;               
+  height: 100%;         
+}
+
+/* 如果你想让侧边栏固定 300px 宽，就写： */
+.fire-control-group {
+  width: 300px;
+  flex-shrink: 0;        /* 不跟地图抢宽度 */
 }
