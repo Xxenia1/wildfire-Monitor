@@ -58,10 +58,7 @@ lon_min, lon_max = -130, -110  # western US
 lat = ds["latitude"]
 lon = ds["longitude"]
 
-lat_mask = (lat >= lat_min) & (lat <= lat_max)
-lon_mask = (lon >= lon_min) & (lon <= lon_max)
-geo_mask = lat_mask & lon_mask
-
+geo_mask = (lat >= lat_min) & (lat <= lat_max) & (lon >= lon_min) & (lon <= lon_max)
 ds_cropped = ds.where(geo_mask, drop=True)
 
 print(" u10 valid count:", xr.where(ds_cropped["u10"].notnull(), 1, 0).sum().item())
@@ -84,62 +81,17 @@ lon_out = ds_cropped["longitude"].values.tolist()
 # create json structure
 json_path = os.path.join(temp_dir, f"{date_str}_wind.json")
 
-# wind_json = {
-#     "date": date_str,
-#     "u10": u10_clean,
-#     "v10": v10_clean,
-#     "latitude": lat_out,
-#     "longitude": lon_out
-# }
-
-# Flatten u/v
-def flatten(arr2d):
-    return [float(v) if np.isfinite(v) else None for row in arr2d for v in row]
-
-u_flat = flatten(ds_cropped["u10"].values)
-v_flat = flatten(ds_cropped["v10"].values)
-
-ny, nx = ds_cropped["u10"].shape
-lo1 = float(ds_cropped["longitude"].values[0][0])
-la1 = float(ds_cropped["latitude"].values[0][0])
-lo2 = float(ds_cropped["longitude"].values[-1][-1])
-la2 = float(ds_cropped["latitude"].values[-1][-1])
-
-# Estimate dx, dy in degrees
-dx = abs(lo2 - lo1) / (nx - 1)
-dy = abs(la1 - la2) / (ny - 1)  # 注意纬度是从高到低的顺序
-
-common_header = {
-    "parameterCategory": 2,
-    "parameterNumber": 2,  # u风为2，v风为3
-    "refTime": now.strftime("%Y-%m-%dT%H:00:00Z"),
-    "lo1": lo1,
-    "la1": la1,
-    "lo2": lo2,
-    "la2": la2,
-    "nx": nx,
-    "ny": ny,
-    "dx": dx,
-    "dy": dy,
-    "parameterUnit": "m.s-1",
-    "gridDefinitionTemplate": 0,
-    "dataType": "wind"
+wind_json = {
+    "date": date_str,
+    "u10": u10_clean,
+    "v10": v10_clean,
+    "latitude": lat_out,
+    "longitude": lon_out
 }
-
-wind_json = [
-    {
-        "header": dict(common_header, parameterNumber=2),  # U 分量
-        "data": u_flat
-    },
-    {
-        "header": dict(common_header, parameterNumber=3),  # V 分量
-        "data": v_flat
-    }
-]
 
 with open(json_path, "w") as f:
     json.dump(wind_json, f)
-
+print(f"JSON written to: {json_path}")
 # %% check json before upload
 with open(json_path, "r") as f:
     content = f.read()

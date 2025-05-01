@@ -2,6 +2,8 @@
 //const smokeLayer = L.layerGroup();
 const CA = '-124.48,32.53,-114.13,42.01';
 const API_KEY = '2900B648-68DC-4DA9-8912-108C4DC5B87A'; 
+let smokeLayerGroup;
+
 
 //AQI color mappig by category
 function getAqiColor(aqi) {
@@ -122,8 +124,8 @@ export function initSmokeMode(map) {
   infoControl.addTo(map);
 
   //create new layer group
-  const layerGroup = L.layerGroup().addTo(map);
-  map._smokeLayer = layerGroup;
+  smokeLayerGroup = L.layerGroup().addTo(map);
+  map._smokeLayer = smokeLayerGroup;
   
   // calculate CA's time
   const nowPac = new Date().toLocaleString('en-US', {
@@ -179,7 +181,7 @@ export function initSmokeMode(map) {
           //stroke: true,
           color: '#000000',
           weight: 0.5,
-        }).addTo(layerGroup);
+        }).addTo(smokeLayerGroup);
 
         // update control
         marker.on('click', () => {
@@ -193,15 +195,6 @@ export function initSmokeMode(map) {
     });
 }
 
-// stub: 根据 fire mode 逻辑展示 Nearby Fires 弹窗
-function showNearbyFires(obs) {
-  // TODO: 集成 fire_mode.js 中的弹窗逻辑
-  alert('Show nearby fires for ' + (obs.SiteName || obs.AgencyName));
-}
-function showSmokePlume(obs) {
-  // TODO: 集成 smoke plume 逻辑
-  alert('Show smoke plume for ' + (obs.SiteName || obs.AgencyName));
-}
 
 // add Legend
 let smokeLegendControl = null;
@@ -227,4 +220,21 @@ export function addSmokeLegend(map) {
     return div;
   };
   legend.addTo(map);
+}
+
+// remove layer
+export function removeSmokeLayer(map) {
+  if (smokeLayerGroup) {
+    map.removeLayer(smokeLayerGroup);
+    smokeLayerGroup = null;
+  }
+
+  if (smokeLegendControl) {
+    map.removeControl(smokeLegendControl);
+    smokeLegendControl = null;
+  }
+
+  if (infoControl) {
+    map.removeControl(infoControl);
+  }
 }

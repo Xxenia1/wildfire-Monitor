@@ -2,7 +2,7 @@
 import { addRealtimeLayer, removeRealtimeLayer } from './RT_fire.js';
 import { initializeHistoricalControls, removeHistoricalLayer } from './His_fire.js';
 import { renderWindLayer, removeWindLayer } from './wind_mode.js';
-import { initSmokeMode, addSmokeLegend } from './smoke_mode.js';
+import { initSmokeMode, addSmokeLegend, removeSmokeLayer} from './smoke_mode.js';
 import { initNdviMode } from './ndvi_mode.js';
 
 // ----------------- Wait until DOM is ready -----------------
@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async() => {
     removeRealtimeLayer(map);
     removeHistoricalLayer(map);
     removeWindLayer(map);
+    removeSmokeLayer(map);
   }
   
 
