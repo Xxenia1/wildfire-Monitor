@@ -25,10 +25,18 @@
     <div id="mode-dropdown-container">
       <button id="main-mode-btn">Select Mode</button>
       <div id="mode-menu" class="dropdown-menu">
-        <button class="dropdown-item" id="fire-btn">Fire</button>
-        <button class="dropdown-item" id="wind-btn">Wind</button>
-        <button class="dropdown-item" id="smoke-btn">Smoke</button>
-        <button class="dropdown-item" id="ndvi-btn">NDVI</button>
+        <!--fire mode as submenu-->
+        <div class="dropdown submenu-container">
+          <button class="dropdown-item" id="fire-btn">Fire</button> 
+          <div class="dropdown-submenu">
+            <button class="dropdown-item" id="predictive-fire-btn">Predictive Fire</button>
+            <button class="dropdown-item" id="urban-impact-btn">Urban Imapct</button>
+            <button class="dropdown-item" id="population-risk-btn">Population Risk</button>
+          </div>
+        </div>
+          <button class="dropdown-item" id="wind-btn">Wind</button>
+          <button class="dropdown-item" id="smoke-btn">Smoke</button>
+          <button class="dropdown-item" id="ndvi-btn">NDVI</button>
       </div>
     </div>
     <!-- Step 2: Map + Conditional Panels -->

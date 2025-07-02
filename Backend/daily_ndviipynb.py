@@ -58,7 +58,7 @@ daily_ndvi = (
 )
 
 count = daily_ndvi.filterDate('2024-01-01','2024-01-02').size().getInfo()
-print("2024-01-01 NDVI Frame rate：", count)
+print("2024-01-01 NDVI Frame rate:", count)
 
 # Visualization and output
 vis = {'min':0,'max':1,'palette':['ffffff','ffeda0','feb24c','f03b20','bd0026']}

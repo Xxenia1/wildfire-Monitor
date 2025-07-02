@@ -5,6 +5,10 @@ import { renderWindLayer, removeWindLayer } from './wind_mode.js';
 import { initSmokeMode, addSmokeLegend, removeSmokeLayer} from './smoke_mode.js';
 import { initNdviMode } from './ndvi_mode.js';
 
+//import { initPredictiveFireMode } from './predictive.js';
+//import { initUrbanImpactMode }    from './urban_impact.js';
+//import { initPopulationRiskMode } from './popu_risk.js';
+
 // ----------------- Wait until DOM is ready -----------------
 document.addEventListener('DOMContentLoaded', async() => {
   // 1. Initialize map
@@ -60,7 +64,22 @@ document.addEventListener('DOMContentLoaded', async() => {
     initializeHistoricalControls(map);
     addRealtimeLayer(map);
   });
+  // 3rd mode btn
+  document.getElementById('predictive-fire-btn').addEventListener('click', () => {
+    hideAllPanels();
+    // call fuction
+    initPredictiveFireMode(map);
+  });
 
+  document.getElementById('urban-impact-btn').addEventListener('click', () => {
+    hideAllPanels();
+    initUrbanImpactMode(map);
+  });
+
+  document.getElementById('population-risk-btn').addEventListener('click', () => {
+    hideAllPanels();
+    initPopulationRiskMode(map);
+  });
 
   // 6. Wind mode
   document.getElementById('wind-btn').addEventListener('click', () => {
