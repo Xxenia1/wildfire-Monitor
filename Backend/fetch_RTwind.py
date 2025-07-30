@@ -103,7 +103,7 @@ with open(json_path, "r") as f:
         print(" JSON clean.")
 
 # %% Define repo data directory
-repo_dir = "/Users/xenia/Desktop/GEOG 778/wildfire-Monitor/Data/Wind"  # 
+repo_dir = "/Users/xeniax/Desktop/GEOG 778/wildfire-Monitor/Data/Wind"  # 
 os.makedirs(repo_dir, exist_ok=True)
 shutil.copy(json_path, os.path.join(repo_dir, "wind_ca_latest.json"))
 print(f"Copied {json_path} to {repo_dir}/wind_ca_latest.json") 
