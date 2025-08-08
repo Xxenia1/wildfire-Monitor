@@ -1,0 +1,35 @@
+name: Auto Fetch & Upload Wind Data
+
+on:
+  schedule:
+    - cron: '0 14 * * *'  # UTC-5, every day at 9:00 am American/Chicago time
+  workflow_dispatch:       # mannual trigger
+
+jobs:
+  fetch-wind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install xarray cfgrib numpy requests
+
+      - name: Run wind fetch script
+        run: |
+          python Backend/fetch_RTwind.py
+
+      - name: Commit & push new wind data
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add Data/Wind/wind_ca_latest.json
+          git commit -m "auto: update wind data" || echo "No changes to commit"
+          git push || true
