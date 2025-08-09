@@ -53,6 +53,10 @@ function makeControl(map) {
 }
 
 export async function enableWind(map) {
+
+  // 加州 + 外海 5°
+  map.fitBounds([[32.0, -130.0], [42.5, -113.0]], { padding: [8,8] });
+
   if (windLayer) return windLayer;
 
   const grid = await fetchVelocityJson();
