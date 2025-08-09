@@ -13,7 +13,7 @@ async function fetchVelocityJson() {
 
 //Use Leaflet Control to make a small toolbar that only appears in wind mode
 function makeControl(map) {
-  // 用 Leaflet Control 做个小工具条，只在风模式时显示
+  // tool only shows in wind mode
   const C = L.Control.extend({
     onAdd: () => {
       const div = L.DomUtil.create('div', 'wind-toolbar');
@@ -21,7 +21,7 @@ function makeControl(map) {
         <button class="wind-btn" id="wind-refresh" title="Refresh">↻</button>
         <button class="wind-btn" id="wind-close"   title="Close">✕</button>
       `;
-      // 防止拖地图时选中文本/冒泡
+      // Prevent text selection/bubbling when dragging the map
       L.DomEvent.disableClickPropagation(div);
       L.DomEvent.disableScrollPropagation(div);
 
@@ -40,7 +40,7 @@ function makeControl(map) {
       };
 
       div.querySelector('#wind-close').onclick = () => {
-        // 关闭=退出风模式
+        // off=exit wind mode
         disableWind(map);
       };
 
@@ -54,7 +54,7 @@ function makeControl(map) {
 
 export async function enableWind(map) {
 
-  // 加州 + 外海 5°
+  // California + offshore 5°
   map.fitBounds([[32.0, -130.0], [42.5, -113.0]], { padding: [8,8] });
 
   if (windLayer) return windLayer;
@@ -70,9 +70,9 @@ export async function enableWind(map) {
 
   windLayer = L.velocityLayer({
     data: grid,
-    maxVelocity: 25,           // m/s 上限（影响色条和速度比例）
-    velocityScale: 0.015,      // 粒子速度缩放，太慢就调大
-    particleMultiplier: 0.008, // 粒子数量，卡就调小
+    maxVelocity: 25,           // m/s upper limit (affects color bar and speed scale)
+    velocityScale: 0.015,      // Particle speed scaling, if it is too slow, increase it
+    particleMultiplier: 0.008, // The number of particles is small.
     lineWidth: 1,
     opacity: 0.9
   }).addTo(map);
