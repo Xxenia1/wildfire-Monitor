@@ -1,110 +1,145 @@
 #!pip install herbie-data cfgrib xarray numpy google-cloud-storage earthengine-api
 
 # %%
+# %%
 import os
 import math
-import xarray as xr
-import numpy as np
-import requests
 import json
 import shutil
 import tempfile
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta, timezone
 
-# %% define date and bounding box
+import numpy as np
+import xarray as xr
+import requests
+
+# ---------------- config ----------------
+# Califorlia bbox（W,S,E,N）
+CA_W, CA_S, CA_E, CA_N = -125.0, 32.0, -113.0, 43.5
+OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Data", "Wind")
+OUT_JSON = os.path.join(OUT_DIR, "wind_ca_latest.json")
+
+# Select the current UTC offset by a few hours to avoid the "latest file has not been generated" window
 now = datetime.utcnow() - timedelta(hours=4)
-date_str = now.strftime('%Y%m%d')
-hour_str = now.strftime('%H')  # earliest available run
+date_str = now.strftime("%Y%m%d")
+hour_str = now.strftime("%H")
 
-# %% construct HRRR file url on aws
-base_url = (
-    f"https://noaa-hrrr-bdp-pds.s3.amazonaws.com/hrrr.{date_str}/conus/hrrr.t{hour_str}z.wrfsfcf00.grib2"
-)
-print(f"Downloading from: {base_url}")
+# U/V@10m of HRRR F00 (analysis/reporting time)
+base_url = f"https://noaa-hrrr-bdp-pds.s3.amazonaws.com/hrrr.{date_str}/conus/hrrr.t{hour_str}z.wrfsfcf00.grib2"
+print("[INFO] Downloading:", base_url)
 
-# %% create temporary dictionary for file download
+# ---------------- download ----------------
+tmpdir = tempfile.mkdtemp()
+grib_path = os.path.join(tmpdir, f"hrrr_{date_str}_{hour_str}.grib2")
 
-temp_dir = tempfile.mkdtemp()
-local_path = os.path.join(temp_dir, f"hrrr_{date_str}.grib2")
+r = requests.get(base_url, stream=True, timeout=60)
+if r.status_code != 200:
+    raise RuntimeError(f"Failed to download HRRR: {r.status_code} {base_url}")
+with open(grib_path, "wb") as f:
+    for chunk in r.iter_content(1 << 15):
+        f.write(chunk)
+print("[INFO] Saved to:", grib_path)
 
-r = requests.get(base_url, stream=True)
-if r.status_code == 200:
-    with open(local_path, 'wb') as f:
-        for chunk in r.iter_content(8192):
-            f.write(chunk)
-    print(f" Downloaded to {local_path}")
-else:
-    raise Exception(f" Failed to download HRRR file: {base_url}")
-
-# %% read file
+# ---------------- open GRIB ----------------
+# HRRR is a Lambert Conformal grid, and cfgrib gives 2D latitude/longitude
 ds = xr.open_dataset(
-    local_path, 
-    engine="cfgrib", 
-    backend_kwargs={
-        "filter_by_keys": {
-            "typeOfLevel": "heightAboveGround",
-            "level": 10
-        }
-    }
+    grib_path,
+    engine="cfgrib",
+    backend_kwargs={"filter_by_keys": {"typeOfLevel": "heightAboveGround", "level": 10}},
 )
-print(ds)
-# Convert 0–360 longitude to -180–180
-ds["longitude"] = xr.where(ds["longitude"] > 180, ds["longitude"] - 360, ds["longitude"])
-# define bounding box
-lat_min, lat_max = 25, 50
-lon_min, lon_max = -130, -110  # western US
 
-#build mask
-lat = ds["latitude"]
-lon = ds["longitude"]
+for cand in ("u10", "u"):
+    if cand in ds:
+        uvar = cand
+        break
+else:
+    raise KeyError("U-wind at 10 m not found (u10/u)")
 
-geo_mask = (lat >= lat_min) & (lat <= lat_max) & (lon >= lon_min) & (lon <= lon_max)
-ds_cropped = ds.where(geo_mask, drop=True)
+for cand in ("v10", "v"):
+    if cand in ds:
+        vvar = cand
+        break
+else:
+    raise KeyError("V-wind at 10 m not found (v10/v)")
 
-print(" u10 valid count:", xr.where(ds_cropped["u10"].notnull(), 1, 0).sum().item())
-print(" v10 valid count:", xr.where(ds_cropped["v10"].notnull(), 1, 0).sum().item())
+# Latitude and longitude coordinate names (cfgrib usually gives 2D 'latitude'/'longitude')
+lat2d = ds["latitude"]
+lon2d = ds["longitude"]
 
-# %% create json
-# u10 = ds_cropped["u10"].values.tolist()
-# v10 = ds_cropped["v10"].values.tolist()
+# longitude 0–360 -> -180–180
+lon2d = xr.where(lon2d > 180, lon2d - 360, lon2d)
 
-# %% replace NaN
-def replace_nan(arr):
-    return [[None if np.isnan(v) else float(v) for v in row] for row in arr]
+# ---------------- crop to California bbox ----------------
+mask = (lat2d >= CA_S) & (lat2d <= CA_N) & (lon2d >= CA_W) & (lon2d <= CA_E)
+# Use where+drop to clip along the y/x dimensions
+u_raw = ds[uvar].where(mask).dropna(dim=ds[uvar].dims[0], how="all").dropna(dim=ds[uvar].dims[1], how="all")
+v_raw = ds[vvar].where(mask).dropna(dim=ds[vvar].dims[0], how="all").dropna(dim=ds[vvar].dims[1], how="all")
 
-u10_clean = replace_nan(ds_cropped["u10"].values)
-v10_clean = replace_nan(ds_cropped["v10"].values)
-lat_out = ds_cropped["latitude"].values.tolist()
-lon_out = ds_cropped["longitude"].values.tolist()
+#The longitude and latitude after synchronous clipping (the dimension name is consistent with the wind farm)
+lat_c = lat2d.sel({u_raw.dims[0]: u_raw[u_raw.dims[0]], u_raw.dims[1]: u_raw[u_raw.dims[1]]})
+lon_c = lon2d.sel({u_raw.dims[0]: u_raw[u_raw.dims[0]], u_raw.dims[1]: u_raw[u_raw.dims[1]]})
 
+# Count non-empty points to ensure that they are not all empty
+valid_u = int(np.isfinite(u_raw.values).sum())
+valid_v = int(np.isfinite(v_raw.values).sum())
+print(f"[INFO] valid counts: U={valid_u}, V={valid_v}")
+if valid_u == 0 or valid_v == 0:
+    raise RuntimeError("Cropped HRRR wind is empty — check bbox / hour / projection.")
 
-# create json structure
-json_path = os.path.join(temp_dir, f"{date_str}_wind.json")
+# ---------------- reorder to (row: north->south, col: west->east) ----------------
+# Sort by the average latitude of each row (descending: north -> south), and by the average longitude of each column (ascending: west -> east)
+lat_mean_by_row = np.nanmean(lat_c.values, axis=1)
+lon_mean_by_col = np.nanmean(lon_c.values, axis=0)
+row_idx = np.argsort(-lat_mean_by_row)  # north -> south
+col_idx = np.argsort(lon_mean_by_col)   # west->east
 
-wind_json = {
-    "date": date_str,
-    "u10": u10_clean,
-    "v10": v10_clean,
-    "latitude": lat_out,
-    "longitude": lon_out
+u_sorted = u_raw.isel({u_raw.dims[0]: row_idx, u_raw.dims[1]: col_idx})
+v_sorted = v_raw.isel({v_raw.dims[0]: row_idx, v_raw.dims[1]: col_idx})
+lat_sorted = lat_c.isel({lat_c.dims[0]: row_idx, lat_c.dims[1]: col_idx})
+lon_sorted = lon_c.isel({lon_c.dims[0]: row_idx, lon_c.dims[1]: col_idx})
+
+ny, nx = u_sorted.shape
+
+# bbox（W,S,E,N）
+west = float(np.nanmin(lon_sorted.values))
+east = float(np.nanmax(lon_sorted.values))
+south = float(np.nanmin(lat_sorted.values))
+north = float(np.nanmax(lat_sorted.values))
+
+dx = float((east  - west ) / (nx - 1)) if nx > 1 else 0.0
+dy = float((north - south) / (ny - 1)) if ny > 1 else 0.0
+
+# ---------------- convert to lists with nulls ----------------
+def to_list_with_null(a):
+    arr = np.where(np.isfinite(a), a, np.nan).tolist()
+    # convert np.nan to None（null in json）
+    return [[(None if (x is None or (isinstance(x, float) and math.isnan(x))) else float(x)) for x in row] for row in arr]
+
+u10 = to_list_with_null(u_sorted.values)
+v10 = to_list_with_null(v_sorted.values)
+
+# ---------------- build JSON document ----------------
+doc = {
+    "meta": {
+        "bbox": [west, south, east, north],
+        "nx": int(nx),
+        "ny": int(ny),
+        "dx": dx,
+        "dy": dy,
+        "units": "m/s",
+        "timestamp": now.replace(tzinfo=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "grid_origin": "upper-left"
+    },
+    "u10": u10,
+    "v10": v10
 }
 
-with open(json_path, "w") as f:
-    json.dump(wind_json, f)
-print(f"JSON written to: {json_path}")
-# %% check json before upload
-with open(json_path, "r") as f:
-    content = f.read()
-    if "NaN" in content:
-        print("[ JSON still contains NaN. Fix the replacement logic.")
-    elif "null" in content:
-        print("[ JSON contains null values. Safe for upload.")
-    else:
-        print(" JSON clean.")
+# ---------------- write ----------------
+os.makedirs(OUT_DIR, exist_ok=True)
+with open(OUT_JSON, "w", encoding="utf-8") as f:
+    json.dump(doc, f, separators=(",", ":"))
 
-# %% Define repo data directory
-repo_dir = "/Users/xeniax/Desktop/GEOG 778/wildfire-Monitor/Data/Wind"  # 
-os.makedirs(repo_dir, exist_ok=True)
-shutil.copy(json_path, os.path.join(repo_dir, "wind_ca_latest.json"))
-print(f"Copied {json_path} to {repo_dir}/wind_ca_latest.json") 
+print("[OK] wrote:", OUT_JSON)
+print("       bbox=", doc["meta"]["bbox"])
+print("       nx,ny=", doc["meta"]["nx"], doc["meta"]["ny"], " dx,dy=", doc["meta"]["dx"], doc["meta"]["dy"])
 # %%

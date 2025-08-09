@@ -346,4 +346,27 @@ html, body {
   margin-bottom: 12px;
 }
 
+.mode-toolbar{
+  position:absolute; z-index:1000; top:10px; left:10px;
+  background:rgba(255,255,255,.95); padding:6px 8px; border-radius:8px;
+  box-shadow:0 2px 8px rgba(0,0,0,.15); font-family: system-ui, sans-serif;
+}
+.mode-btn{
+  margin-right:6px; padding:4px 10px; border-radius:6px;
+  border:1px solid #ddd; background:#fff; cursor:pointer;
+}
+.mode-btn.active{ background:#2b8a3e; color:#fff; border-color:#2b8a3e; }
+
+.wind-toolbar{
+  background: rgba(255,255,255,.9);
+  padding: 6px; border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+.wind-btn{
+  border: 1px solid #ddd; background:#fff; margin-right:6px;
+  width:28px; height:28px; border-radius:6px; cursor:pointer;
+}
+.wind-btn:hover{ background:#f3f3f3; }
+
+
 

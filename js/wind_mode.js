@@ -1,152 +1,86 @@
-// public/js/wind_mode.js
+// visualization of wind mode（leaflet-velocity）
 
-// globals to persist between calls
-let windMap = null;
-let svgLayer = null;
-let arrowGroup = null;
-let currentArrows = [];
+let windLayer = null;
+let windCtl = null;
 
-/**
- * Fetch wind JSON, build arrows, and draw/animate them.
- */
-export function renderWindLayer(map) {
-  if (!map) {
-    console.error('renderWindLayer: map is null or undefined');
-    return;
-  }
-  windMap = map;
-
-  // 1. On first invocation, create the SVG and group
-  if (!svgLayer) {
-    svgLayer = d3.select(map.getPanes().overlayPane)
-      .append('svg')
-      .attr('class', 'leaflet-zoom-animated')
-      .style('position', 'absolute')
-      .style('pointer-events', 'none');
-
-    arrowGroup = svgLayer.append('g')
-      .attr('class', 'leaflet-zoom-hide wind-arrows');
-
-    // Re-draw arrows whenever the map moves or zooms
-    map.on('zoomend moveend', updateArrows);
-  }
-
-  // 2. Compute today’s URL
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm   = String(today.getMonth() + 1).padStart(2, '0');
-  const dd   = String(today.getDate()).padStart(2, '0');
-  const filename = `${yyyy}${mm}${dd}_wind.json`;
-  const url = `https://storage.googleapis.com/wildfire-monitor-data/wind/${filename}`;
-
-  console.log(`Fetching wind data from: ${url}`);
-  fetch(url)
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    })
-    .then(raw => {
-      const windData = Array.isArray(raw) ? raw[0] : raw;
-      const { u10, v10, latitude: lats, longitude: lons } = windData;
-
-      // 3. Build a flat array of arrows at your grid step
-      const step = 6;
-      const latMin = 32, latMax = 42;
-      const lonMin = -125, lonMax = -114;
-      const arrows = [];
-
-      for (let i = 0; i < u10.length; i += step) {
-        for (let j = 0; j < u10[i].length; j += step) {
-          const u   = u10[i][j];
-          const v   = v10[i][j];
-          const lat = lats[i][j];
-          const lon = lons[i][j];
-          if (!Number.isFinite(u) || !Number.isFinite(v)) continue;
-          if (lat < latMin || lat > latMax || lon < lonMin || lon > lonMax) continue;
-          arrows.push({ id: `${i}-${j}`, lat, lon, u, v });
-        }
-      }
-
-      // store & draw
-      currentArrows = arrows;
-      updateArrows();
-
-      // optionally pan/zoom to CA
-      map.flyTo([36.7783, -119.4179], 6);
-    })
-    .catch(err => console.error('Failed to load wind data:', err));
+async function fetchVelocityJson() {
+  // Add a timestamp to prevent caching
+  const url = `./Data/Wind/wind_ca_velocity.json?t=${Date.now()}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Fetch wind json failed: ${res.status}`);
+  return res.json();
 }
 
-/**
- * Internal: reproject + redraw all arrows.
- */
-function updateArrows() {
-  if (!windMap || !svgLayer || !arrowGroup) return;
+//Use Leaflet Control to make a small toolbar that only appears in wind mode
+function makeControl(map) {
+  // 用 Leaflet Control 做个小工具条，只在风模式时显示
+  const C = L.Control.extend({
+    onAdd: () => {
+      const div = L.DomUtil.create('div', 'wind-toolbar');
+      div.innerHTML = `
+        <button class="wind-btn" id="wind-refresh" title="Refresh">↻</button>
+        <button class="wind-btn" id="wind-close"   title="Close">✕</button>
+      `;
+      // 防止拖地图时选中文本/冒泡
+      L.DomEvent.disableClickPropagation(div);
+      L.DomEvent.disableScrollPropagation(div);
 
-  // get pixel bounds
-  const bounds = windMap.getBounds();
-  const tl = windMap.latLngToLayerPoint(bounds.getNorthWest());
-  const br = windMap.latLngToLayerPoint(bounds.getSouthEast());
+      div.querySelector('#wind-refresh').onclick = async () => {
+        try {
+          const data = await fetchVelocity();
+          if (windLayer && typeof windLayer.setData === 'function') {
+            windLayer.setData(data);
+          } else if (windLayer) {
+            const m = windLayer._map;
+            m.removeLayer(windLayer);
+            windLayer = L.velocityLayer({ data, maxVelocity: 25, velocityScale: 0.015, particleMultiplier: 0.008, opacity: 0.9, lineWidth: 1 });
+            windLayer.addTo(m);
+          }
+        } catch (e) { console.error(e); alert('刷新失败'); }
+      };
 
-  svgLayer
-    .attr('width',  br.x - tl.x)
-    .attr('height', br.y - tl.y)
-    .style('left', `${tl.x}px`)
-    .style('top',  `${tl.y}px`);
+      div.querySelector('#wind-close').onclick = () => {
+        // 关闭=退出风模式
+        disableWind(map);
+      };
 
-  arrowGroup.attr('transform', `translate(${-tl.x},${-tl.y})`);
-
-  // helper
-  const projectPoint = (lat, lon) => {
-    const p = windMap.latLngToLayerPoint([lat, lon]);
-    return { x: p.x, y: p.y };
-  };
-
-  // D3 join
-  const lines = arrowGroup.selectAll('line.wind')
-    .data(currentArrows, d => d.id);
-
-  // exit
-  lines.exit().remove();
-
-  // enter (start both endpoints at same spot)
-  const enter = lines.enter()
-    .append('line')
-      .attr('class', 'wind')
-      .attr('stroke', 'blue')
-      .attr('stroke-width', 1.5)
-      .attr('opacity', 0.6)
-      .attr('x1', d => projectPoint(d.lat, d.lon).x)
-      .attr('y1', d => projectPoint(d.lat, d.lon).y)
-      .attr('x2', d => projectPoint(d.lat, d.lon).x)
-      .attr('y2', d => projectPoint(d.lat, d.lon).y);
-
-  // enter + update → animate arrow “growth”
-  enter.merge(lines)
-    .transition()
-      .duration(500)
-      .attr('x2', d => {
-        const p = projectPoint(d.lat, d.lon);
-        return p.x + d.u * 5;
-      })
-      .attr('y2', d => {
-        const p = projectPoint(d.lat, d.lon);
-        return p.y + d.v * 5;
-      });
+      return div;
+    },
+    onRemove: () => {}
+  });
+  const ctl = new C({ position: 'topleft' });
+  return ctl;
 }
 
-/**
- * Remove everything when switching modes.
- */
-export function removeWindLayer(map) {
-  if (svgLayer) {
-    svgLayer.remove();
-    svgLayer = null;
-    arrowGroup = null;
-    currentArrows = [];
-    if (windMap) {
-      windMap.off('zoomend moveend', updateArrows);
-      windMap = null;
-    }
-  }
+export async function enableWind(map) {
+  if (windLayer) return windLayer;
+
+  const grid = await fetchVelocityJson();
+
+  // adjust map view to the wind data bounds
+  try {
+    const h = grid[0].header;
+    const bounds = [[h.la2, h.lo1], [h.la1, h.lo2]]; // [[S,W],[N,E]]
+    map.fitBounds(bounds, { padding: [8, 8] });
+  } catch (_) {}
+
+  windLayer = L.velocityLayer({
+    data: grid,
+    maxVelocity: 25,           // m/s 上限（影响色条和速度比例）
+    velocityScale: 0.015,      // 粒子速度缩放，太慢就调大
+    particleMultiplier: 0.008, // 粒子数量，卡就调小
+    lineWidth: 1,
+    opacity: 0.9
+  }).addTo(map);
+
+  //only show the control when wind mode is enabled
+  windCtl = makeControl(map);
+  map.addControl(windCtl);
 }
+
+export function disableWind(map) {
+  if (!windLayer) return;
+  map.removeLayer(windLayer);
+  windLayer = null;
+}
+
