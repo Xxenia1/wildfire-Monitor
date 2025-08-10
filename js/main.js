@@ -1,6 +1,7 @@
 // Initialize the Leaflet map and add layers for wind, fire, smoke, and NDVI modes. Allow toggling between modes.
 import { enableWind, disableWind } from './wind_mode.js'; // Import the wind mode functions
 import { enableFire, disableFire } from './Fire_Mode.js'; // Import the fire mode functions
+import { initSmokeMode, removeSmokeMode, refreshSmokeMode } from "./smoke_mode.js"; // Import the smoke mode functions
 
 // 1. Initialize the map: set center (lat/lng) and zoom level
 window.map = L.map('map').setView([37.5, -119.5], 6);
@@ -12,6 +13,16 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 	subdomains: 'abcd',
 	maxZoom: 20
 }).addTo(map);
+
+window.smoke = {};
+smoke.layer = await initSmokeMode(map, {
+  // 可调参数：
+  // bbox: [-125, 32, -113, 43.5], // 默认加州
+  maxAgeMin: 60,  // 过去 60 分钟
+  n: 1000,
+  cacheTtl: 30,
+  refreshSec: 60  // 每 60s 自动刷新；不需要自动刷新就删掉这一行
+});
 
 // Mode status (Only one is allowed to be opened at a time)
 let state = {
