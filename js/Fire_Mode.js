@@ -1,76 +1,69 @@
-// Establish Fire Mode
-let firePointsLayer = null;
+// Visualization of Fire Mode
 
-// CA Bounding box
-const CA_BOUNDS = {
-    minLat: 32.5,
-    maxLat: 42.1,
-    minLng: -124.5,
-    maxLng: -114.1
+// Fire Perimeter Layer
+
+const CA_BBOX = [-125, 32, -113, 43.5]; // [W,S,E,N]
+const WFIGS_PERIMS_QUERY =
+  "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query";
+
+function buildPerimeterUrl() {
+  const p = new URLSearchParams({
+    f: "geojson",
+    where: "1=1",
+    outFields: "*",
+    outSR: "4326",
+    geometry: CA_BBOX.join(","),           
+    geometryType: "esriGeometryEnvelope",
+    inSR: "4326",
+    spatialRel: "esriSpatialRelIntersects"
+  });
+  return `${WFIGS_PERIMS_QUERY}?${p.toString()}`;
+}
+
+let _perimeterLayer = null;
+
+export async function enableFire(map) {
+  if (_perimeterLayer) {                   // If it has already been loaded, return directly
+    _perimeterLayer.addTo(map);
+    return _perimeterLayer;
+  }
+  const url = buildPerimeterUrl();
+  const gj = await fetch(url).then(r => {
+    if (!r.ok) throw new Error(`WFIGS HTTP ${r.status}`);
+    return r.json();
+  });
+
+  // Style: Orange for incomplete control, green for highly controlled fields (field name error tolerance)
+  const style = (f) => {
+    const p = f.properties || {};
+    const pct = p.percentcontained ?? p.poly_PercentContained ?? p.PERCENT_CONTAINED;
+    const color = (Number(pct) >= 70) ? "#2e7d32" : "#ff6d00";
+    return { color, weight: 2, fillOpacity: 0.1 };
   };
-  export async function initFirePointsLayer(map) {
-    // Remove previous layer if exists
-    if (firePointsLayer) {
-      map.removeLayer(firePointsLayer);
+
+  _perimeterLayer = L.geoJSON(gj, {
+    style,
+    onEachFeature: (f, l) => {
+      const p = f.properties || {};
+      const name = p.incidentname || p.poly_IncidentName || p.IncidentName || "Fire";
+      const acres = p.gisacres ?? p.poly_GISAcres ?? p.GISAcres;
+      const pct = p.percentcontained ?? p.poly_PercentContained ?? p.PERCENT_CONTAINED;
+      const updated = p.irwinmodifiedondate || p.modifiedondate || p.CreateDate || p.poly_CreateDate;
+
+      l.bindPopup(
+        `<b>${name}</b><br/>
+         Acres: ${acres ?? "—"}<br/>
+         Contained: ${pct ?? "—"}%<br/>
+         Updated: ${updated ?? "—"}`
+      );
     }
-  
-    // NASA FIRMS USA (including CA) - VIIRS, 24h, public API
-    const url = 'https://firms.modaps.eosdis.nasa.gov/data/active_fire/viirs/geojson/USA_contiguous_and_Hawaii_24h.geojson';
-  
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch FIRMS fire data.');
-      const geojson = await response.json();
-  
-      // Filter features to California bounds
-      geojson.features = geojson.features.filter(f => {
-        const [lng, lat] = f.geometry.coordinates;
-        return lat >= CA_BOUNDS.minLat && lat <= CA_BOUNDS.maxLat &&
-               lng >= CA_BOUNDS.minLng && lng <= CA_BOUNDS.maxLng;
-      });
-  
-      // Add points to the map
-      firePointsLayer = L.geoJSON(geojson, {
-        pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-          radius: getRadius(feature.properties.frp),
-          color: getColor(feature.properties.acq_date, feature.properties.acq_time),
-          fillOpacity: 0.7,
-          weight: 1
-        }),
-        onEachFeature: (feature, layer) => {
-          layer.bindPopup(getPopupContent(feature));
-        }
-      }).addTo(map);
-  
-    } catch (err) {
-      console.error(err);
-      alert('Failed to load California fire points data!');
-    }
+  }).addTo(map);
+
+  return _perimeterLayer;
+}
+
+export function disableFire(map) {
+  if (_perimeterLayer) {
+    map.removeLayer(_perimeterLayer);
   }
-  
-  // Helper functions
-  
-  function getRadius(frp) {
-    if (!frp) return 4;
-    if (frp < 10) return 4;
-    if (frp < 30) return 6;
-    if (frp < 80) return 8;
-    return 10;
-  }
-  
-  function getColor(date, time) {
-    // Color can be mapped based on detection time; simple example here
-    return "#ff7800";
-  }
-  
-  function getPopupContent(feature) {
-    const p = feature.properties;
-    return `
-      <b>Acquisition:</b> ${p.acq_date} ${p.acq_time}<br>
-      <b>FRP:</b> ${p.frp}<br>
-      <b>Confidence:</b> ${p.confidence}<br>
-      <b>Latitude:</b> ${p.latitude}<br>
-      <b>Longitude:</b> ${p.longitude}
-    `;
-  }
-  
+}

@@ -1,5 +1,6 @@
-//import { initFirePointsLayer } from './Fire_Mode.js';
-import { enableWind, disableWind } from './wind_mode.js';
+// Initialize the Leaflet map and add layers for wind, fire, smoke, and NDVI modes. Allow toggling between modes.
+import { enableWind, disableWind } from './wind_mode.js'; // Import the wind mode functions
+import { enableFire, disableFire } from './Fire_Mode.js'; // Import the fire mode functions
 
 // 1. Initialize the map: set center (lat/lng) and zoom level
 const map = L.map('map').setView([37.5, -119.5], 6);
@@ -10,17 +11,27 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
-// Mode status
+// Mode status (Only one is allowed to be opened at a time)
 let state = {
   wind: false,
   fire: false,
   smoke: false,
   ndvi: false,
 };
+// ---- Mode Switching Logic ----
 async function switchMode(mode) {
+ if (mode === state.current) {
+    // Click the same button again = close the mode
+    await closeMode(mode);
+    state.current = null;
+    return;
+  } 
+  // Close the currently active mode first
+  if (state.current) await closeMode(state.current);
+  
   // 先把与目标互斥的模式关掉（这里演示全关）
   if (mode !== 'wind' && state.wind) { disableWind(map); state.wind = false; }
-  if (mode !== 'fire' && state.fire) { disableFire(); state.fire = false; }
+  if (mode !== 'fire' && state.fire) { disableFire(map); state.fire = false; }
   if (mode !== 'smoke' && state.smoke) { disableSmoke(); state.smoke = false; }
   if (mode !== 'ndvi' && state.ndvi) { disableNDVI(); state.ndvi = false; }
 

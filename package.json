@@ -1,0 +1,27 @@
+{
+  "name": "wildfire-monitor",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "- The wildfire monitoring platform aims to provide an interactive, real-time monitoring platform",
+  "main": "index.js",
+  "directories": { "lib": "lib" },
+  "scripts": {
+    "fetch:firms": "node scripts/fetch_firms.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Xxenia1/wildfire-Monitor.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Xxenia1/wildfire-Monitor/issues"
+  },
+  "homepage": "https://github.com/Xxenia1/wildfire-Monitor#readme",
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "papaparse": "^5.5.3"
+  }
+}
