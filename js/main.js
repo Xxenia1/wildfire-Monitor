@@ -3,14 +3,16 @@ import { enableWind, disableWind } from './wind_mode.js'; // Import the wind mod
 import { enableFire, disableFire } from './Fire_Mode.js'; // Import the fire mode functions
 
 // 1. Initialize the map: set center (lat/lng) and zoom level
-const map = L.map('map').setView([37.5, -119.5], 6);
+window.map = L.map('map').setView([37.5, -119.5], 6);
 // California: [latitude, longitude], zoom level 6-7 is good for statewide view
 
 // 2. Add the OpenStreetMap basemap tiles
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '&copy; OpenStreetMap contributors'
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+	subdomains: 'abcd',
+	maxZoom: 20
 }).addTo(map);
+
 // Mode status (Only one is allowed to be opened at a time)
 let state = {
   wind: false,

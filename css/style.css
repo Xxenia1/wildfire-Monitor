@@ -368,5 +368,109 @@ html, body {
 }
 .wind-btn:hover{ background:#f3f3f3; }
 
+/* ====== FIRMS 热点 Popup 样式 ====== */
+.hotspot-popup {
+  font: 13px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+
+.hotspot-popup h4 {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+}
+
+.hotspot-popup .sub {
+  color: #667;
+  margin-bottom: 8px;
+}
+
+.hotspot-popup .kv {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 4px 10px;
+  margin: 6px 0;
+}
+
+.hotspot-popup .k {
+  color: #556;
+  text-align: right;
+}
+
+.hotspot-popup .v {
+  color: #111;
+}
+
+.hotspot-popup .muted {
+  color: #6b7280;
+}
+
+.hotspot-popup .badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  border: 1px solid transparent;
+}
+
+.badge-high {
+  background: #e8f5e9;
+  border-color: #2e7d32;
+  color: #2e7d32;
+}
+
+.badge-nom {
+  background: #fff3e0;
+  border-color: #ff8f00;
+  color: #ff8f00;
+}
+
+.badge-low {
+  background: #fdecea;
+  border-color: #c62828;
+  color: #c62828;
+}
+
+.badge-unk {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.hotspot-popup .foot {
+  margin-top: 8px;
+  color: #6b7280;
+}
+
+/* ====== Fire Perimeter Popup 样式 ====== */
+.perim-popup {
+  font: 13px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+
+.perim-popup h4 {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+}
+
+.perim-popup .kv {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 4px 10px;
+  margin: 6px 0;
+}
+
+.perim-popup .k {
+  color: #556;
+  text-align: right;
+}
+
+.perim-popup .v {
+  color: #111;
+}
+
+.perim-popup .note {
+  margin-top: 8px;
+  color: #6b7280;
+}
+
+
 
 
