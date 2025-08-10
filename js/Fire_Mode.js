@@ -1,11 +1,12 @@
 // Visualization of Fire Mode
 // Fire mode = WFIGS perimeters (polygons) + FIRMS hotspots (points)
 
-// --------- 常量与工具 ---------
+// --------- Constants and Tools ---------
 const CA_BBOX = [-125, 32, -113, 43.5]; // [W,S,E,N]
 const WFIGS_QUERY =
   "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query";
 
+// fetch perimeters polygon
 function buildPerimeterUrl() {
   const p = new URLSearchParams({
     f: "geojson",
@@ -19,10 +20,17 @@ function buildPerimeterUrl() {
   });
   return `${WFIGS_QUERY}?${p.toString()}`;
 }
-
+// fetch FIRMS fire data
 function getFirmsLatestUrl() {
   const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   return isLocal ? "public/data/firms_ca_latest.geojson" : "data/firms_ca_latest.geojson";
+}
+// fetch cal fire incidents latest geojson
+function getCalfireUrl() {
+  const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  return isLocal
+    ? "public/data/calfire_incidents_latest.geojson"
+    : "data/calfire_incidents_latest.geojson";
 }
 
 const isNum = (n) => Number.isFinite(n);
@@ -175,12 +183,116 @@ function firmsPopup(feature, layer) {
   layer.bindPopup(html);
 }
 
+// --------- CAL FIRE style & popup ---------
+function calfireStyle(feature) {
+  const p = feature?.properties ?? {};
+  const pct = Number(p.PercentContained ?? p.percentcontained ?? p.PERCENT_CONTAINED);
+  const status = String(p.Status ?? p.IncidentStatus ?? "").toLowerCase();
+
+  const color =
+    Number.isFinite(pct) && pct >= 70
+      ? "#2e7d32"                          // 70%+ 绿色
+      : (status.includes("active") || status.includes("new"))
+      ? "#e65100"                          // 活动态/新起火 橙色
+      : "#6d4c41";                         // 其他 棕色
+
+  const isPoly = feature.geometry?.type === "Polygon" || feature.geometry?.type === "MultiPolygon";
+  return { color, weight: isPoly ? 2 : 1.5, fillOpacity: isPoly ? 0.15 : 1 };
+}
+
+function calfirePopup(feature, layer) {
+  const p = feature?.properties ?? {};
+  const name    = p.Name || p.IncidentName || "Incident";
+  const county  = p.County || p.CaliforniaCounty || "—";
+  const acres   = p.AcresBurned ?? p.GISAcres ?? p.DailyAcres ?? p.acres ?? "—";
+  const pct     = p.PercentContained ?? p.percentcontained ?? "—";
+  const started = p.Started ?? p.StartDate ?? p.StartDateTime ?? "—";
+  const updated = p.Updated ?? p.ModifiedOnDate ?? p.UpdateDate ?? "—";
+  const status  = p.Status ?? p.IncidentStatus ?? (p.IsActive ? "Active" : "—");
+  const cause   = p.Cause ?? p.cause ?? "";
+  const url     = p.Url || p.URL || p.IncidentURL || "";
+
+  const html = `
+    <div class="calfire-popup">
+      <h4>🚒 CAL FIRE Incident</h4>
+      <div class="kv">
+        <div class="k">Incident</div><div class="v">${name}</div>
+        <div class="k">County</div><div class="v">${county}</div>
+        <div class="k">Area</div><div class="v">${acres} acres</div>
+        <div class="k">Contained</div><div class="v">${pct}%</div>
+        <div class="k">Started</div><div class="v">${started}</div>
+        <div class="k">Updated</div><div class="v">${updated}</div>
+        <div class="k">Status</div><div class="v">${status}</div>
+        ${cause ? `<div class="k">Cause</div><div class="v">${cause}</div>` : ""}
+        ${url ? `<div class="k">Official</div><div class="v"><a href="${url}" target="_blank" rel="noopener">Incident page</a></div>` : ""}
+      </div>
+      <div class="note">State-level incident records (last 24h).</div>
+    </div>
+  `;
+  layer.bindPopup(html);
+}
 
 // --------- Internal State ---------
 let _group = null;        // group layer
 let _perimLayer = null;   // WFIGS layer
 let _firmsLayer = null;   // FIRMS layer
+let _calfireLayer = null; // CAL FIRE layer
 let _refreshTimer = null; // refresh timer
+
+// --------- Legend Control ---------
+let _fireLegend = null;
+
+function createFireLegend() {
+  const Legend = L.Control.extend({
+    options: { position: 'bottomright' },
+    onAdd: function () {
+      const div = L.DomUtil.create('div', 'legend fire-legend');
+      div.innerHTML = `
+        <div class="legend-title">Fire Layers</div>
+
+        <div class="legend-row">
+          <span class="swatch line orange"></span>
+          <span>WFIGS Perimeter < 70% contained</span>
+        </div>
+        <div class="legend-row">
+          <span class="swatch line green"></span>
+          <span>WFIGS Perimeter ≥ 70% contained</span>
+        </div>
+
+        <div class="legend-row">
+          <span class="swatch dot red"></span>
+          <span>FIRMS hotspot <em>(size ≈ confidence)</em></span>
+        </div>
+
+        <div class="legend-row">
+          <span class="swatch dot brown"></span>
+          <span>CAL FIRE incident (point)</span>
+        </div>
+        <div class="legend-row">
+          <span class="swatch line brown"></span>
+          <span>CAL FIRE incident perimeter</span>
+        </div>
+      `;
+      // Prevent dragging/scrolling the legend from affecting the map
+      L.DomEvent.disableClickPropagation(div);
+      L.DomEvent.disableScrollPropagation(div);
+      return div;
+    }
+  });
+  return new Legend();
+}
+
+function addFireLegend(map) {
+  if (!_fireLegend) _fireLegend = createFireLegend();
+  _fireLegend.addTo(map);
+}
+
+function removeFireLegend(map) {
+  if (_fireLegend) {
+    map.removeControl(_fireLegend);
+    _fireLegend = null;
+  }
+}
 
 // --------- Outer API ---------
 export async function enableFire() {
@@ -216,7 +328,25 @@ export async function enableFire() {
     console.warn("FIRMS hotspots load failed:", e);
   }
 
-  // 3) refresh：WFIGS 90min、FIRMS 30min；统一 60min 简化
+  //  Loading CAL FIRE incidents (today / last 24h)
+  try {
+    const calGeo = await fetch(getCalfireUrl(), { cache: "no-cache" }).then(r => r.json());
+    _calfireLayer = L.geoJSON(calGeo, {
+      pointToLayer: (feat, latlng) => L.circleMarker(latlng, {
+        radius: 5,
+        color: "#6d4c41",
+        weight: 1,
+        fillColor: "#8d6e63",
+        fillOpacity: 0.9
+      }),
+      style: calfireStyle,
+      onEachFeature: calfirePopup
+    }).addTo(_group);
+  } catch (e) {
+    console.warn("CAL FIRE incidents load failed:", e);
+  }
+
+  // 3) refresh：WFIGS 90min、FIRMS 30min；Unified 60min simplified
   clearInterval(_refreshTimer);
   _refreshTimer = setInterval(async () => {
     try {
@@ -228,11 +358,16 @@ export async function enableFire() {
         const freshFirms = await fetch(getFirmsLatestUrl(), { cache: "no-cache" }).then(r => r.json());
         _firmsLayer.clearLayers(); _firmsLayer.addData(freshFirms);
       }
+      if (_calfireLayer) {
+        const freshCal = await fetch(getCalfireUrl(), { cache: "no-cache" }).then(r => r.json());
+        _calfireLayer.clearLayers(); _calfireLayer.addData(freshCal);
+      }
     } catch (e) {
       console.warn("Fire mode refresh failed:", e);
     }
   }, 60 * 60 * 1000);
 
+  addFireLegend(map);
   return _group;
 }
 
@@ -240,4 +375,6 @@ export function disableFire() {
   const map = window.map;
   if (_group && map) map.removeLayer(_group);
   if (_refreshTimer) { clearInterval(_refreshTimer); _refreshTimer = null; }
+  removeFireLegend(map);
 }
+
