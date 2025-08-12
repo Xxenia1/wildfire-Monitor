@@ -11,14 +11,14 @@ const app = express();
 const PORT = process.env.PORT || 8787;
 const PURPLEAIR_API_KEY = process.env.PURPLEAIR_API_KEY;
 const DEFAULT_CACHE_TTL =
-  parseInt(process.env.DEFAULT_CACHE_TTL || "600", 10) || 600; // 10 min 默认
+  parseInt(process.env.DEFAULT_CACHE_TTL || "600", 10) || 600; // 10 min default
 
 if (!PURPLEAIR_API_KEY) {
   console.error("ERROR: Missing PURPLEAIR_API_KEY in .env");
   process.exit(1);
 }
 
-// ------- CORS 白名单 -------
+// ------- CORS Whitelist -------
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
   .map(s => s.trim())
@@ -27,7 +27,7 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
 app.use(
   cors({
     origin: (origin, cb) => {
-      // 无 Origin（curl、本地脚本）或白名单为空 → 放行（开发友好）
+      // No Origin (curl, local script) or whitelist is empty → Allow (development-friendly)
       if (!origin || allowedOrigins.length === 0) return cb(null, true);
       if (allowedOrigins.includes(origin)) return cb(null, true);
       return cb(new Error("Not allowed by CORS"), false);
@@ -38,9 +38,9 @@ app.use(
 app.use(morgan("dev"));
 
 const PA_BASE = "https://api.purpleair.com/v1";
-const cache = new Map(); // 简易内存缓存
+const cache = new Map(); 
 
-// ------- 缓存工具 -------
+// ------- Caching tools -------
 function makeCacheKey(path, query) {
   const sorted = [...new URLSearchParams(query).entries()].sort(([a], [b]) =>
     a.localeCompare(b)
@@ -68,7 +68,7 @@ function setCached(path, query, data) {
   cache.set(key, { ts: Date.now(), data });
 }
 
-// ------- 工具 -------
+// ------- tools -------
 function inBbox(rec, bbox) {
   const [w, s, e, n] = bbox.map(Number);
   const lat = rec.latitude ?? rec.sensor?.latitude;
@@ -83,7 +83,7 @@ function inBbox(rec, bbox) {
   );
 }
 
-// {fields:[], data:[[]]} → [{...}] ；否则原样返回 data
+// {fields:[], data:[[]]} → [{...}] ；Otherwise return as is data
 function normalizeRecords(json) {
   const fields = Array.isArray(json?.fields) ? json.fields : null;
   const rows = Array.isArray(json?.data) ? json.data : [];
@@ -109,7 +109,6 @@ function recordToFeature(rec) {
     properties: {
       id: rec.sensor_index ?? rec.id ?? rec.sensor?.id ?? undefined,
       name: rec.name ?? rec.sensor?.name ?? null,
-      // 注意：PurpleAir 字段名带点
       pm2_5: rec["pm2.5_atm"] ?? rec.pm2_5_atm ?? rec.pm2_5 ?? null,
       humidity: rec.humidity ?? null,
       temperature: rec.temperature ?? null,
@@ -120,7 +119,7 @@ function recordToFeature(rec) {
   };
 }
 
-// ================== 路由: /api/sensors ==================
+// ================== routing: /api/sensors ==================
 app.get("/api/sensors", async (req, res) => {
   try {
     const {
@@ -136,17 +135,17 @@ app.get("/api/sensors", async (req, res) => {
 
     const ttl = Math.max(0, parseInt(cache_ttl, 10) || DEFAULT_CACHE_TTL);
 
-    // 先查缓存
+    // check cache first
     const hit = ttl > 0 ? getCached(req.path, req.query, ttl) : null;
     if (hit) return res.json(hit);
 
-    // 组装 PurpleAir 请求（设默认 fields）
+    // Assemble the PurpleAir request (set default fields)
     const DEFAULT_FIELDS =
       "latitude,longitude,pm2.5_atm,name,last_seen,humidity,temperature,pressure";
     const url = new URL(`${PA_BASE}/sensors`);
     url.searchParams.set("fields", fields || DEFAULT_FIELDS);
 
-    // 仅透传合法值，避免 400
+    // Only pass through legal values to avoid 400
     if (location_type === "0" || location_type === "1" || location_type === "both") {
       url.searchParams.set("location_type", location_type);
     }
@@ -160,7 +159,7 @@ app.get("/api/sensors", async (req, res) => {
       else if (v != null && v !== "") url.searchParams.set(k, v);
     }
 
-    // 请求上游
+    // request former
     const upstream = await fetch(url.toString(), {
       headers: { "X-API-Key": PURPLEAIR_API_KEY },
     });
@@ -169,7 +168,7 @@ app.get("/api/sensors", async (req, res) => {
       const text = await upstream.text();
       console.error("PurpleAir error", upstream.status, text);
 
-      // 402/429 → 返回旧缓存（如果有），并标注 stale:true
+      // 402/429 → back to old cache，labeled stale:true
       if (upstream.status === 402 || upstream.status === 429) {
         const stale = getStale(req.path, req.query);
         if (stale) {
@@ -182,7 +181,7 @@ app.get("/api/sensors", async (req, res) => {
     const json = await upstream.json();
     const rows = normalizeRecords(json);
 
-    // 二次 bbox 过滤
+    //  bbox filter
     let final;
     if (bbox) {
       const parts = bbox.split(",").map(Number);
@@ -204,10 +203,10 @@ app.get("/api/sensors", async (req, res) => {
   }
 });
 
-// ============ 路由: /api/sensors/geojson（基于上一路由） ============
+// ============  /api/sensors/geojson（based on former） ============
 app.get("/api/sensors/geojson", async (req, res) => {
   try {
-    // 直接请求自身 /api/sensors（含缓存与兜底）
+    // request from /api/sensors
     const self = new URL(`${req.protocol}://${req.get("host")}/api/sensors`);
     for (const [k, v] of Object.entries(req.query)) {
       if (Array.isArray(v)) v.forEach(val => self.searchParams.append(k, val));
@@ -232,7 +231,7 @@ app.get("/api/sensors/geojson", async (req, res) => {
     }
 
     const body = { type: "FeatureCollection", features };
-    if (raw?.stale) body.stale = true; // 透传陈旧标记
+    if (raw?.stale) body.stale = true; // Transparent transmission of stale markers
 
     return res.json(body);
   } catch (e) {
@@ -241,7 +240,7 @@ app.get("/api/sensors/geojson", async (req, res) => {
   }
 });
 
-// 健康检查
+// health check
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => {
