@@ -23,14 +23,12 @@ function buildPerimeterUrl() {
 // fetch FIRMS fire data
 function getFirmsLatestUrl() {
   //const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-  return "public/data/firms_ca_latest.geojson";
+  return "public/data/firms_ca_latest.geojson"
 }
 // fetch cal fire incidents latest geojson
 function getCalfireUrl() {
   //const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-  return 
-     "public/data/calfire_incidents_latest.geojson";
-
+  return "public/data/calfire_incidents_latest.geojson"
 }
 
 const isNum = (n) => Number.isFinite(n);
