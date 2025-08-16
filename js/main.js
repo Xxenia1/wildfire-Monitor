@@ -2,7 +2,7 @@ import { enableWind, disableWind } from './wind_mode.js';
 import { enableFire, disableFire } from './Fire_Mode.js';
 import { initSmokeMode, removeSmokeMode } from "./smoke_mode.js";
 
-window.map = L.map('map').setView([37.5, -119.5], 6);
+window.map = L.map('map').setView([37.5, -119.5], 7);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; OpenStreetMap & CARTO', subdomains: 'abcd', maxZoom: 20
 }).addTo(map);

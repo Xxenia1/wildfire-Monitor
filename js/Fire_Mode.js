@@ -22,15 +22,15 @@ function buildPerimeterUrl() {
 }
 // fetch FIRMS fire data
 function getFirmsLatestUrl() {
-  const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-  return isLocal ? "public/data/firms_ca_latest.geojson" : "data/firms_ca_latest.geojson";
+  //const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  return "public/data/firms_ca_latest.geojson";
 }
 // fetch cal fire incidents latest geojson
 function getCalfireUrl() {
-  const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-  return isLocal
-    ? "public/data/calfire_incidents_latest.geojson"
-    : "data/calfire_incidents_latest.geojson";
+  //const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  return 
+     "public/data/calfire_incidents_latest.geojson";
+
 }
 
 const isNum = (n) => Number.isFinite(n);
@@ -87,6 +87,25 @@ function firmsMarker(feature, latlng) {
   conf = (typeof conf === 'number')
     ? conf
     : (/^\d+(\.\d+)?$/.test(String(conf)) ? Number(conf) : 50);
+
+//   const frp = Number(p.frp);
+//   const base = 6;
+//   const confBoost = (Number(conf) || 50) / 25;
+//   const frpBoost  = Number.isFinite(frp) ? Math.min(8, Math.sqrt(Math.max(0, frp))) : 0;
+//   const r = Math.max(6, Math.min(18, base + confBoost + frpBoost));
+
+//   // main point style
+//   const core = L.circleMarker(latlng, {
+//     radius: r,
+//     color: "#ffffff",     // 白边
+//     weight: 1,
+//     fillColor: "#e53935", // 红
+//     fillOpacity: 0.85,
+//   });
+
+//   // 组合成一个点层
+//   return L.layerGroup([halo, core]);
+// }
   const r = isNum(conf) ? Math.max(3, Math.min(7, Math.round(conf / 10))) : 4;
 
   return L.circleMarker(latlng, {
@@ -333,7 +352,7 @@ export async function enableFire() {
     const calGeo = await fetch(getCalfireUrl(), { cache: "no-cache" }).then(r => r.json());
     _calfireLayer = L.geoJSON(calGeo, {
       pointToLayer: (feat, latlng) => L.circleMarker(latlng, {
-        radius: 5,
+        radius: 10,
         color: "#6d4c41",
         weight: 1,
         fillColor: "#8d6e63",
