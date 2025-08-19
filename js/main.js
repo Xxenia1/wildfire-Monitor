@@ -1,6 +1,8 @@
 import { enableWind, disableWind } from './wind_mode.js';
 import { enableFire, disableFire } from './Fire_Mode.js';
 import { initSmokeMode, removeSmokeMode } from "./smoke_mode.js";
+import { initNdviMode, removeNdviMode } from './ndvi_mode.js';
+
 
 window.map = L.map('map').setView([37.5, -119.5], 7);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -10,21 +12,23 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 // ---- smoke wrappers ----
 async function enableSmoke() {
   await initSmokeMode(map, { 
+    bbox: [-125, 32, -113, 43.5],
     //maxAgeMin: 60, 
-    //n: 1000, 
+    n: 500, 
     cacheTtl: 600, 
-    refreshSec: 600 });
+    refreshSec: 0 });
 }
 function disableSmoke() { removeSmokeMode(map); }
 
 // ---- state & switch ----
 let state = { wind:false, fire:false, smoke:false, ndvi:false, current:null };
 
+
 async function closeMode(mode){
   if (mode === 'wind')  { disableWind(map);  state.wind  = false; }
   if (mode === 'fire')  { disableFire();     state.fire  = false; }
   if (mode === 'smoke') { disableSmoke();    state.smoke = false; }
-  if (mode === 'ndvi')  { /* disableNDVI(); */ state.ndvi = false; }
+  if (mode === 'ndvi')  { removeNdviMode(map); state.ndvi = false; } 
 }
 
 async function switchMode(mode) {
@@ -35,9 +39,9 @@ async function switchMode(mode) {
     if (mode === 'wind')  { await enableWind(map);  state.wind  = true; }
     if (mode === 'fire')  { await enableFire();     state.fire  = true; }
     if (mode === 'smoke') { await enableSmoke();    state.smoke = true; }
-    if (mode === 'ndvi')  { /* await enableNDVI(); */ state.ndvi = true; }
+    if (mode === 'ndvi')  { await initNdviMode(map); state.ndvi = true; }
     state.current = mode;
-  } catch(e){ console.error(e); alert('加载失败，请稍后重试'); }
+  } catch(e){ console.error(e); alert('Loading failed, please try again later'); }
 
   updateBtns();
 }

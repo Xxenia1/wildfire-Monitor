@@ -56,6 +56,20 @@ const COLOR = {
 };
 const isNum = (n) => Number.isFinite(n);
 
+// ---- Progression (FIRMS daily) quick overlay ----
+const PROG_LAST_N_DAYS = 7;        // 显示最近 N 天
+const PROG_SEARCH_RADIUS_KM = 60;  // 只取离所选火场中心 60km 内的点，避免全州混入
+const PROG_CIRCLE_RADIUS_M = 350;  // 每个热点画 350m 的圆，叠出“蔓延面”的感觉
+const PROG_COLORS = [              // 天数不够会循环
+  "#2563eb","#22c55e","#eab308","#f97316","#ef4444",
+  "#8b5cf6","#14b8a6","#84cc16","#f59e0b","#fb7185"
+];
+
+// 可选：把普通 FIRMS 点也放大（你说太小）
+const FIRMS_RADIUS_MIN = 7;
+const FIRMS_RADIUS_MAX = 13;
+const FIRMS_RADIUS_BASE = 3;
+
 // --------- Containment gradient (0% red → 50% orange → 100% green) ---------
 function containmentColor(pct) {
   const v = Math.max(0, Math.min(100, Number(pct) || 0));
@@ -104,8 +118,40 @@ function perimPopup(feature, layer) {
          <div class="k">Updated</div><div class="v">${updated}</div>
        </div>
        <div class="note">Perimeter color = containment% (gradient).</div>
+       <div class="ops" style="margin-top:8px">
+        <button class="btn btn-primary" id="btn-prog-show">
+          Show the spread of the last${PROG_LAST_N_DAYS}days (FIRMS approximation)
+        </button>
+        <button class="btn" id="btn-prog-hide">Hidden Spread</button>
+      </div>
      </div>`
   );
+  //bind events for btns
+  layer.on("popupopen", (e) => {
+  const root = e.popup.getElement();
+  const btnShow = root.querySelector("#btn-prog-show");
+  const btnHide = root.querySelector("#btn-prog-hide");
+
+  btnShow?.addEventListener(
+    "click",
+    (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();            // 防止点按钮触发地图点击
+      showFirmsProgressionForPerimeter(feature, PROG_LAST_N_DAYS);
+    },
+    { once: true }                      // 同一弹窗只绑一次
+  );
+
+  btnHide?.addEventListener(
+    "click",
+    (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      removeFirmsProgression(window.map);
+    },
+    { once: true }
+  );
+});
 }
 
 function validPerimeter(feature) {
@@ -136,7 +182,10 @@ function firmsMarker(feature, latlng) {
     ? conf
     : (/^\d+(\.\d+)?$/.test(String(conf)) ? Number(conf) : 50);
 
-  const r = Number.isFinite(conf) ? Math.max(7, Math.min(13, Math.round(conf / 10))) : 4;
+  const r = Number.isFinite(conf)
+  ? Math.max(FIRMS_RADIUS_MIN, Math.min(FIRMS_RADIUS_MAX, FIRMS_RADIUS_BASE + Math.round(conf / 5)))
+  : Math.round((FIRMS_RADIUS_MIN + FIRMS_RADIUS_MAX) / 2);
+
   return L.circleMarker(latlng, {
     radius: r,
     color: "#ffffff",
@@ -264,7 +313,7 @@ function calfirePoint(latlng, feature) {
   // 可视 🔥 图标（DivIcon）
   const pin = L.marker(latlng, {
     icon: L.divIcon({
-      className: "calfire-icon",
+      className: "calfire-icon leaflet-interactive",
       html: `<div class="calfire-pin">🔥</div>`,
       iconSize: [22, 22],       // 稍微放大 20→22
       iconAnchor: [11, 11],
@@ -294,7 +343,7 @@ function calfirePoint(latlng, feature) {
   group.bindPopup(calfirePopupHtml(feature?.properties || {}));
 
   // 保险：显式在点击时打开（有些自定义样式会影响默认行为）
-  group.on("click", () => group.openPopup());
+   group.on("click", (e) => group.openPopup(e.latlng));
 
   // 把 GeoJSON 的 feature 挂回去，方便后续过滤/侧栏读取属性
   group.feature = feature;
@@ -656,6 +705,13 @@ export async function enableFire() {
 
   return _group;
 }
+window.__prog = () => {
+  if (!_perimLayer) return console.warn("no perim layer");
+  const l = _perimLayer.getLayers()[0];
+  if (!l?.feature) return console.warn("no feature");
+  console.log("[prog] run:", l.feature?.properties?.IncidentName);
+  showFirmsProgressionForPerimeter(l.feature, PROG_LAST_N_DAYS);
+};
 
 export function disableFire() {
   const map = window.map;
@@ -674,6 +730,115 @@ export function disableFire() {
   removeFireLegend(map);
   if (_fireFilterCtl){ try { map.removeControl(_fireFilterCtl); } catch(_) {} _fireFilterCtl = null; }
   if (_fireListCtl)  { try { map.removeControl(_fireListCtl); } catch(_) {} _fireListCtl = null; }
+}
+// ===== FIRMS 近几日“蔓延感知”覆盖层（近似版） =====
+function ymd(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function lastNDates(n){
+  const out=[]; const today=new Date();
+  for (let i=0;i<n;i++){ const d=new Date(today); d.setDate(today.getDate()-i); out.push(ymd(d)); }
+  return out;
+}
+function haversineKm(lat1,lon1,lat2,lon2){
+  const toRad = (x)=>x*Math.PI/180, R=6371;
+  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+async function tryFetchJSON(url){
+  try{
+    const r = await fetch(url, { cache:"no-store" });
+    if (!r.ok) return null;
+    return await r.json();
+  }catch{ return null; }
+}
+
+let _firmsProgLayer = null;
+let _firmsProgLegend = null;
+
+function removeFirmsProgression(map){
+  if (_firmsProgLayer){ try{ map.removeLayer(_firmsProgLayer); }catch{} _firmsProgLayer=null; }
+  if (_firmsProgLegend){ try{ map.removeControl(_firmsProgLegend);}catch{} _firmsProgLegend=null; }
+}
+
+function buildProgCircle(lat, lng, color){
+  const disk = L.circle([lat,lng], {
+    radius: PROG_CIRCLE_RADIUS_M,
+    color, weight: 1, fillColor: color, fillOpacity: 0.35,
+    pane: "firmsPane"
+  });
+  const hit = L.circle([lat,lng], {
+    radius: Math.max(PROG_CIRCLE_RADIUS_M, 600),
+    color:"transparent", fillColor:"transparent", opacity:0, fillOpacity:0,
+    pane:"firmsPane", interactive:true
+  });
+  return L.featureGroup([disk, hit]);
+}
+
+async function showFirmsProgressionForPerimeter(perimFeature, days=PROG_LAST_N_DAYS){
+  const map = window.map;
+  removeFirmsProgression(map);
+
+  // 用你文件里已有的工具函数：getFeatureCenter(f)（在末尾 Utils 里）
+  const [cx, cy] = getFeatureCenter(perimFeature); // [lng, lat]
+  const dates = lastNDates(days);
+
+  const layerGroups = [];
+  const legendItems = [];
+
+  for (let i=dates.length-1; i>=0; i--){
+    const d = dates[i];
+    const url = `public/data/firms_ca_${d}.geojson`; // 你的命名
+    const gj = await tryFetchJSON(url);
+    if (!gj || !gj.features) continue;
+
+    const color = PROG_COLORS[(dates.length-1 - i) % PROG_COLORS.length];
+    const g = L.layerGroup([], { pane: "firmsPane" });
+
+    for (const f of gj.features){
+      const gmr = f.geometry;
+      if (!gmr || gmr.type!=="Point") continue;
+      const [lng, lat] = gmr.coordinates;
+      if (haversineKm(cy, cx, lat, lng) > PROG_SEARCH_RADIUS_KM) continue;
+      g.addLayer(buildProgCircle(lat, lng, color));
+    }
+    if (g.getLayers().length){
+      layerGroups.push(g);
+      legendItems.push({ label: d, color });
+    }
+  }
+
+  if (!layerGroups.length){
+    alert("附近未找到最近几天的 FIRMS 数据。");
+    return;
+  }
+
+  _firmsProgLayer = L.layerGroup(layerGroups).addTo(map);
+
+  const Legend = L.Control.extend({
+    options: { position: "bottomright" },
+    onAdd: function(){
+      const div = L.DomUtil.create("div", "panel legend firms-prog-legend");
+      div.innerHTML = `
+        <div class="panel-title">FIRMS Progression (Approximately)</div>
+        <div class="list">
+          ${legendItems.map(it=>`
+            <div class="legend-row">
+              <span class="swatch" style="background:${it.color}"></span>
+              <span>${it.label}</span>
+            </div>`).join("")}
+          <div style="margin-top:6px">
+            <button class="btn" id="btn-hide-prog">Hidden Spread</button>
+          </div>
+        </div>`;
+      L.DomEvent.disableClickPropagation(div);
+      L.DomEvent.disableScrollPropagation(div);
+      setTimeout(()=>{
+        div.querySelector("#btn-hide-prog")?.addEventListener("click", ()=> removeFirmsProgression(window.map));
+      },0);
+      return div;
+    }
+  });
+  _firmsProgLegend = new Legend().addTo(map);
 }
 
 // ======================= Utils =============================================
