@@ -49,17 +49,30 @@ async function switchMode(mode) {
 function createModeToolbar() {
   const div = document.createElement('div');
   div.className = 'mode-toolbar';
+
+  // 关键：内联定位，放到标题栏下方
+  div.style.position = 'fixed';
+  div.style.zIndex   = '1001';                         // 高于地图
+  div.style.left     = '12px';
+  div.style.top      = 'calc(var(--header-h) + 8px)';  // 标题高度 + 间距
+  // 如果你担心没有 --header-h，也可以用回退值：
+  // const h = getComputedStyle(document.documentElement).getPropertyValue('--header-h')?.trim() || '56px';
+  // div.style.top = `calc(${h} + 8px)`;
+
   div.innerHTML = `
-    <button class="mode-btn" data-mode="wind" >Wind</button>
-    <button class="mode-btn" data-mode="fire" >Fire</button>
+    <button class="mode-btn" data-mode="wind">Wind</button>
+    <button class="mode-btn" data-mode="fire">Fire</button>
     <button class="mode-btn" data-mode="smoke">Smoke</button>
-    <button class="mode-btn" data-mode="ndvi" >NDVI</button>
+    <button class="mode-btn" data-mode="ndvi">NDVI</button>
   `;
+
   document.body.appendChild(div);
+
   div.querySelectorAll('.mode-btn').forEach(btn =>
     btn.addEventListener('click', () => switchMode(btn.dataset.mode))
   );
 }
+
 
 function updateBtns(){
   document.querySelectorAll('.mode-btn').forEach(btn => {
