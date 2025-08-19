@@ -346,16 +346,42 @@ html, body {
   margin-bottom: 12px;
 }
 
+/* 让模式按钮出现在标题栏下方 */
+:root { --header-h: 56px; } /* 这行与你 index.html 里的高度保持一致 */
+
 .mode-toolbar{
-  position:absolute; z-index:1000; top:10px; left:10px;
-  background:rgba(255,255,255,.95); padding:6px 8px; border-radius:8px;
-  box-shadow:0 2px 8px rgba(0,0,0,.15); font-family: system-ui, sans-serif;
+  position: fixed;
+  top: calc(var(--header-h) + 8px); /* 标题栏高度 + 间距 */
+  left: 12px;
+  z-index: 900;                      /* 低于标题栏(1000)，高于地图 */
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  background: rgba(255,255,255,.92);
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
 }
-.mode-btn{
-  margin-right:6px; padding:4px 10px; border-radius:6px;
-  border:1px solid #ddd; background:#fff; cursor:pointer;
+
+/* 可选：按钮小优化 */
+.mode-toolbar .mode-btn{
+  padding: 6px 10px;
+  border-radius: 8px;
 }
-.mode-btn.active{ background:#2b8a3e; color:#fff; border-color:#2b8a3e; }
+.mode-toolbar .mode-btn.active{
+  box-shadow: inset 0 0 0 2px #4f46e5;
+}
+
+/* 小屏适配：左右留白，居中一点 */
+@media (max-width: 640px){
+  .mode-toolbar{
+    top: calc(var(--header-h) + 6px);
+    left: 8px; right: 8px;
+    justify-content: center;
+  }
+}
+
 
 .wind-toolbar{
   background: rgba(255,255,255,.9);
@@ -367,6 +393,7 @@ html, body {
   width:28px; height:28px; border-radius:6px; cursor:pointer;
 }
 .wind-btn:hover{ background:#f3f3f3; }
+
 
 /* ====== FIRMS 热点 Popup 样式 ====== */
 .hotspot-popup {

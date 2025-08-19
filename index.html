@@ -1,31 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wildfire-Monitor Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wildfire-Monitor Dashboard</title>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <link rel="stylesheet" href="css/style.css">
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
-    <!-- Leaflet Core -->
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <!-- leaflet-velocity -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-velocity/dist/leaflet-velocity.css"/>
+  <script src="https://unpkg.com/leaflet-velocity/dist/leaflet-velocity.min.js"></script>
 
-    <!-- leaflet-velocity -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-velocity/dist/leaflet-velocity.css" />
-    <script src="https://unpkg.com/leaflet-velocity/dist/leaflet-velocity.min.js"></script>
+  <!-- Polyline Decorator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.1.0/leaflet.polylineDecorator.min.js"></script>
 
-    <!-- Polyline Decorator -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.1.0/leaflet.polylineDecorator.min.js"></script>
-    <!-- D3 -->
-    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <!-- D3 & Turf -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 
-    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+  <!-- Your styles -->
+  <link rel="stylesheet" href="css/style.css"/>
 
+  <!-- （可选）如果你不想改 style.css，可临时覆盖关键样式 -->
+  <style>
+    :root { --header-h: 56px; }
+    html, body { height: 100%; margin: 0; }
+    /* 让地图避开顶部标题栏 */
+    #map{
+      position:absolute; left:0; right:0; bottom:0;
+      top:var(--header-h);
+    }
+    /* 顶部标题栏 */
+    .app-header{
+      position:fixed; left:0; right:0; top:0; height:var(--header-h);
+      background:#0f0f10; color:#fff; z-index:1000;
+      box-shadow:0 1px 0 rgba(255,255,255,.06), 0 1px 8px rgba(0,0,0,.2);
+    }
+    .app-header__inner{
+      height:100%; display:flex; align-items:center; justify-content:space-between;
+      padding:0 16px; gap:12px;
+    }
+    .app-title{ margin:0; font-size:18px; font-weight:700; letter-spacing:.3px; }
+
+    /* 首访欢迎弹窗 */
+    .modal.hidden{ display:none; }
+    .modal{ position:fixed; inset:0; background:rgba(0,0,0,.35);
+      display:flex; align-items:center; justify-content:center; z-index:2000; }
+    .modal-card{ width:min(560px,92vw); background:#fff; color:#111;
+      border-radius:12px; padding:18px 20px; box-shadow:0 10px 30px rgba(0,0,0,.25); }
+    .modal-card h2{ margin:0 0 8px; font-size:20px; }
+    .modal-card p{ margin:6px 0 8px; line-height:1.5; }
+    .modal-list{ margin:8px 0 12px 18px; }
+    .modal-check{ display:flex; align-items:center; gap:8px; font-size:13px; color:#444; }
+    .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
+    .btn{ padding:8px 12px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer;}
+    .btn:hover{ background:#f6f6f6; }
+    .btn-primary{ background:#4f46e5; color:#fff; border-color:#4f46e5; }
+    .btn-primary:hover{ filter:brightness(.96); }
+  </style>
 </head>
- <div id="map"></div> 
+
+<body>
+  <!-- 顶部标题栏 -->
+  <header id="app-header" class="app-header">
+    <div class="app-header__inner">
+      <h1 class="app-title">California Wildfire Monitoring Dashboard</h1>
+      <!-- 右侧可以放 About / 数据说明 / GitHub 链接（可选） -->
+      <!-- <a class="app-link" href="#" style="color:#cbd5e1;text-decoration:none;">About</a> -->
+    </div>
+  </header>
+
+  <!-- 首次访问欢迎弹窗 -->
+  <div id="welcome-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+    <div class="modal-card">
+      <h2 id="welcome-title">Welcome 👋</h2>
+      <p>
+        Welcome to the <b>California Wildfire Monitoring Dashboard</b>.
+        Data layers include <b>WFIGS perimeters</b>, <b>FIRMS hotspots</b>, and <b>CAL FIRE incidents</b>.
+      </p>
+      <ul class="modal-list">
+        <li>Use the <b>Wind / Fire / Smoke / NDVI</b> buttons to switch modes.</li>
+        <li>Click a <b>perimeter</b> or a <b>🔥 incident</b> to view details.</li>
+        <li>The right panel offers filters; the legend explains symbology.</li>
+      </ul>
+      <label class="modal-check">
+        <input type="checkbox" id="welcome-noshow" checked/>
+        Don't show this again
+      </label>
+      <div class="modal-actions">
+        <button id="welcome-close" class="btn btn-primary">Get started</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 地图容器 -->
+  <div id="map"></div>
+
+  <!-- App entry -->
   <script type="module" src="js/main.js"></script>
-
 </body>
-
 </html>
+
