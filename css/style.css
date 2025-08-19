@@ -544,5 +544,68 @@ html, body {
 .mode-toolbar .mode-btn.active{
   background:#2b7; border-color:#2b7; color:#fff;
   }
+  /* 通用小面板 */
+.panel {
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(2px);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  font-size: 13px;
+  color: #222;
+}
+.panel .panel-title { font-weight: 700; margin-bottom: 8px; }
+
+.kv { display: grid; grid-template-columns: 90px 1fr; gap: 6px 10px; line-height: 1.2; }
+.kv .k { color:#666; }
+.kv .v { color:#111; }
+.note, .sub { color:#666; font-size:12px; margin-top:6px; }
+.muted { color:#777; font-size:12px; }
+
+/* 徽章 */
+.badge { display:inline-block; padding:2px 6px; border-radius:999px; font-size:12px; line-height:1; border:1px solid rgba(0,0,0,0.08); }
+.badge-high{ background:#e8f5e9; color:#1b5e20;}
+.badge-mid{  background:#fff8e1; color:#e65100;}
+.badge-low{  background:#ffebee; color:#b71c1c;}
+.badge-unk{  background:#eceff1; color:#37474f;}
+
+/* 侧边 Top5 列表 */
+.fire-list { width: 280px; max-height: 58vh; overflow:auto; }
+.fire-list .list { display: grid; gap: 8px; }
+.fire-item { border:1px solid rgba(0,0,0,0.08); border-radius:12px; padding:8px 10px; cursor:pointer; background:#fff; }
+.fire-item:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+.fire-item .title { font-weight:600; margin-bottom:6px; }
+.fire-item .meta  { display:flex; gap:6px; }
+.chip { background:#f2f2f2; border-radius:999px; padding:2px 8px; font-size:12px; }
+
+/* 筛选器 */
+.fire-filters { width: 220px; }
+.fire-filters .row { display:flex; align-items:center; justify-content:space-between; margin:6px 0; gap:10px; }
+.fire-filters select { width: 120px; padding:4px 6px; border-radius:8px; border:1px solid #ddd; }
+
+/* Legend 改造 */
+.legend .legend-row { display:flex; align-items:center; gap:8px; margin:6px 0; }
+.legend .swatch { display:inline-block; }
+.legend .swatch.line { width:30px; height:0; border-top:3px solid var(--c,#2e7d32); border-radius: 2px; }
+.legend .swatch.dot.red { width:10px; height:10px; border-radius:50%; background:#e53935; border:1px solid #fff; box-shadow: 0 0 0 1px #b71c1c; }
+.legend .swatch.icon { width:18px; text-align:center; }
+
+.legend .gradient { display:flex; align-items:center; gap:8px; margin:8px 0 4px; }
+.legend .gradient .bar {
+  width: 140px; height: 10px; border-radius: 6px;
+  background: linear-gradient(90deg, #e53935 0%, #ff6d00 50%, #2e7d32 100%);
+  border:1px solid rgba(0,0,0,0.08);
+}
+
+/* CAL FIRE emoji 图标更清晰 */
+.calfire-icon { pointer-events: auto; }
+.calfire-pin { font-size:18px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35)); }
+.leaflet-pane.calfirePane,
+.leaflet-pane.calfirePane .leaflet-marker-icon,
+.calfire-icon,
+.calfire-pin {
+  pointer-events: auto !important;
+}
 
 
