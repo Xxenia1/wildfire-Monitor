@@ -556,6 +556,32 @@ html, body {
 
 /* description text */
 .legend.fire-legend .legend-row em{ color:#6b7280; font-style: normal; }
+/* --- stack controls in the corners so they never overlap --- */
+#map .leaflet-control-container .leaflet-bottom.leaflet-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;               /* 间距：右下角控件之间 */
+  padding-right: 12px;
+  padding-bottom: 12px;
+}
+
+#map .leaflet-control-container .leaflet-bottom.leaflet-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;               /* 间距：左下角控件之间 */
+  padding-left: 12px;
+  padding-bottom: 12px;
+}
+
+/* 提高层级，确保可见 */
+.panel.legend.fire-legend { z-index: 1200; }
+.panel.legend.firms-prog-legend { z-index: 1190; }
+
+/* （可选）如果 attribution 太靠近左下角，压到最下面 */
+#map .leaflet-control-attribution { order: 99; z-index: 900; }
+
 
 .mode-toolbar{
   position:absolute; top:10px; left:10px; z-index:1000;
