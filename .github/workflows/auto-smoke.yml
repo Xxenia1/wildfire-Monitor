@@ -1,6 +1,9 @@
 name: Update smoke snapshot (CA)
 
 on:
+  push:
+    branches: [fix/airnow-snapshots]
+    paths: [.github/workflows/auto-smoke.yml]
   schedule:
     - cron: "40 * * * *" # AirNow usually publishes the prior hour's observations by :30.
   workflow_dispatch: {}
