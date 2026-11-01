@@ -8,7 +8,10 @@
   "scripts": {
     "fetch:firms": "node scripts/fetch_firms.js",
     "fetch:calfire": "node scripts/fetch_calfire.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "fetch:wfigs": "node scripts/fetch_wfigs.js",
+    "fetch:smoke": "node scripts/fetch_airnow.js",
+    "check:public-data": "node scripts/check_public_data.js",
+    "test": "node --test tests/*.test.js"
   },
   "repository": {
     "type": "git",

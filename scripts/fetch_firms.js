@@ -19,13 +19,17 @@ const CA_BBOX = [-125, 32, -113, 43.5].join(",");
 const SOURCE  = process.env.FIRMS_SOURCE || "VIIRS_SNPP_NRT";
 const DAY     = process.env.FIRMS_DAY || "1";
 const CSV_URL = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${FIRMS_KEY}/${SOURCE}/${CA_BBOX}/${DAY}`;
+const RECENT_URL = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${FIRMS_KEY}/${SOURCE}/${CA_BBOX}/5`;
 
 const OUT_DIR    = path.resolve(__dirname, "..", "public", "data");
 const OUT_LATEST = path.join(OUT_DIR, "firms_ca_latest.geojson");
-const OUT_DATED  = path.join(OUT_DIR, `firms_ca_${new Date().toISOString().slice(0,10)}.geojson`);
+const OUT_RECENT = path.join(OUT_DIR, "firms_ca_recent.geojson");
 
-function toGeoJSON(csvText) {
+function toGeoJSON(csvText, dayRange) {
   const parsed = Papa.parse(csvText.trim(), { header: true, dynamicTyping: true });
+  if (parsed.errors.length || !parsed.meta.fields?.includes("latitude") || !parsed.meta.fields?.includes("longitude")) {
+    throw new Error("Invalid FIRMS CSV; existing snapshot was preserved");
+  }
   const rows = parsed.data.filter(r => r && r.latitude && r.longitude);
   const features = rows.map(r => ({
     type: "Feature",
@@ -38,10 +42,11 @@ function toGeoJSON(csvText) {
   }));
   return {
     type: "FeatureCollection",
-    name: "FIRMS VIIRS CA (last 1 day)",
+    name: `FIRMS VIIRS CA (last ${dayRange} days)`,
     crs: { type: "name", properties: { name: "EPSG:4326" } },
     fetched_at_utc: new Date().toISOString(),
-    source: { url: CSV_URL, dataset: SOURCE, bbox: CA_BBOX, day_range: DAY },
+    // Never include the request URL: it contains the FIRMS API key.
+    source: { provider: "NASA FIRMS", dataset: SOURCE, bbox: CA_BBOX, day_range: dayRange },
     features
   };
 }
@@ -55,23 +60,32 @@ async function withRetry(fn, times=3, delay=1500) {
 
 (async () => {
   fs.mkdirSync(OUT_DIR, { recursive: true });
-  const csvText = await withRetry(async () => {
-    const r = await fetch(CSV_URL, { timeout: 30000 });
+  async function fetchCSV(url) { return withRetry(async () => {
+    let r;
+    try {
+      r = await fetch(url, { timeout: 30000 });
+    } catch (e) {
+      // Fetch errors can include the request URL, including its API key.
+      throw new Error(`FIRMS request failed: ${e.code || e.name || "network error"}`);
+    }
     if (!r.ok) throw new Error(`FIRMS HTTP ${r.status}`);
     return await r.text();
-  });
+  }); }
 
-  const gj = toGeoJSON(csvText);
-  const content = JSON.stringify(gj);
-
-  const existed = fs.existsSync(OUT_LATEST);
-  const old = existed ? fs.readFileSync(OUT_LATEST, "utf-8") : "";
-  if (existed && hash(old) === hash(content)) {
-    console.log("No changes in FIRMS data. Skipping update.");
-    process.exit(0);
+  const latest = toGeoJSON(await fetchCSV(CSV_URL), DAY);
+  const recent = toGeoJSON(await fetchCSV(RECENT_URL), "5");
+  const content = JSON.stringify(latest);
+  const recentContent = JSON.stringify(recent);
+  if (content.includes(FIRMS_KEY) || recentContent.includes(FIRMS_KEY)) {
+    throw new Error("Refusing to write FIRMS API key to public data");
   }
 
-  fs.writeFileSync(OUT_LATEST, content);
-  fs.writeFileSync(OUT_DATED,  content);
-  console.log(`Wrote ${OUT_LATEST} & ${OUT_DATED}, features=${gj.features.length}`);
+  for (const [output, next] of [[OUT_LATEST, content], [OUT_RECENT, recentContent]]) {
+    const old = fs.existsSync(output) ? fs.readFileSync(output, "utf-8") : "";
+    if (hash(old) === hash(next)) continue;
+    const temp = `${output}.tmp`;
+    fs.writeFileSync(temp, next);
+    fs.renameSync(temp, output);
+  }
+  console.log(`Updated FIRMS snapshots: latest=${latest.features.length}, recent=${recent.features.length}`);
 })();

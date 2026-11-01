@@ -1,7 +1,15 @@
 # California Wildfire Monitoring Platform
+
+## Data updates
+The live layers use shared files produced by scheduled GitHub Actions jobs. Fire snapshots are fetched about every 30 minutes, EPA AirNow smoke observations about every hour, and wind once a day. Browsers only read these files and display their data time. The NDVI animation is historical (2024). See [the rollout and operations plan](docs/rollout-plan.zh-CN.md) for setup, quota checks, and failure recovery.
+
+
+## Credentials
+Set `FIRMS_KEY` and `AIRNOW_API_KEY` as GitHub Actions repository secrets. The website's Smoke mode reads the scheduled AirNow snapshot. `Backend/fetch_smoke.py` remains an optional manual archive utility and is not used by the website. Never commit real keys or complete API request URLs.
+
 ## Brief Introduction:
 - The wildfire monitoring platform aims to provide an interactive, real-time monitoring platform for tracking real-time wildfires, wind speed/direction, smoke dispersion, and vegetation health in California. 
-- By leveraging *Google Earth Engine (GEE)* as backend for ingesting and processing **NASA VIIRS** fire detections, **Sentinel-2 NDVI time series**, **NOAA HRRR** wind & smoke models, along with real-time **CAL FIRE/NIFC FIRS** and **PurpleAir API** streams automated via GitHub Actions.
+- Scheduled GitHub Actions jobs collect NASA FIRMS VIIRS fire detections, WFIGS perimeters, CAL FIRE incidents, NOAA HRRR wind, and EPA AirNow PM₂.₅ monitoring-site observations. NDVI imagery is displayed from historical files.
 - At the front end, the dashboard employs *Leaflet.js* for interactive mapping, *D3.js* for dynamic charts and animations, and *turf.js* for spatial analyses—generating predictive fire-spread buffers, urban-impact overlays, and population-risk estimations.
 ### Audience:
 1. Researchers who study wildfire behavior and trends.
@@ -17,7 +25,7 @@ All satellite data can be used directly in GEE, because it combines a multi-peta
 | Real-time Wildfire Detections | CAL FIRE/NIFC FIRS API <br>[NASA VIIRS VNP13A1](https://developers.google.com/earth-engine/datasets/catalog/NASA_VIIRS_002_VNP13A1) | Fetches active fire points and displays them on the map |
 | Historical Fire Perimeters | CAL FIRE/NIFC | Displays historical fire boundary polygons                 |
 | Wind Data | [NOAA AWS S3 Public Repository](https://registry.opendata.aws/noaa-hrrr-pds/)(10 m U/V)<br>Hourly updates | Canvas/WebGL particle animation; hover shows speed/direction|
-| Smoke Data | Ground PM₂.₅ / AQI [PurpleAir API](https://developer.purpleair.com/) | Live PM₂.₅ heatmap matched to EPA AQI breakpoints|
+| Smoke Data | [EPA AirNow API](https://docs.airnowapi.org/webservices) monitoring-site PM₂.₅ AQI | Hourly observation points colored by reported AQI |
 | NDVI Time-Series | [Harmonized Sentinel-2 MSI: MultiSpectral Instrument, Level-2A (SR)](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR_HARMONIZED) | Used for displaying NDVI time series. (2013~present) |
 | Population Raster | US Census Bureau | Zonal statistics to estimate population at risk|
 | City Boundaries | OpenStreetMap | Overlays predicted fire zones to identify at-risk cities |
@@ -36,8 +44,8 @@ The final deliverable is an interactive web-based wildfire monitoring system tha
 - Speed: a particle’s motion speed is proportional to the local wind speed
 - Opacity & length: stronger winds produce longer tails and brighter (less transparent) trail segments; lighter winds appear as short, faint streaks.
 - Users can toggle on/off. Also, users can hover over any point on the map briefly displays a small popup with the exact interpolated wind speed and direction at that location.
-3. Smoke mode: shows smoke dispersion from NOAA HRRR Smoke, which updates every hour.
-- Point-based heatmap (PurpleAir API): Convert live PM2.5 readings to a leaflet heatmap, which color ramp corresponds to the EPA AQI breakpoints, giving a localized view of “actual” smoke conditions at ground level.
+3. Smoke mode: shows preliminary PM₂.₅ air-quality observations from EPA AirNow monitoring sites. It does not show a smoke-dispersion forecast.
+- Point markers use AirNow's reported AQI and the corresponding EPA AQI colors. Raw PM₂.₅ concentration is shown only when AirNow supplies it.
 - Users can toggle on/off.
 4. NDVI time-series: animates NDVI changes over time. (2024~present)
 - Once select , the animation will display on the side bar along with D3 line chart (vegetation index over time).

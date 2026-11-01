@@ -43,6 +43,10 @@
       padding:0 16px; gap:12px;
     }
     .app-title{ margin:0; font-size:18px; font-weight:700; letter-spacing:.3px; }
+    #data-status{ display:flex; gap:6px; overflow-x:auto; white-space:nowrap; font-size:11px; }
+    .data-status-badge{ padding:4px 7px; border-radius:5px; background:#214c37; color:#fff; }
+    .data-status-stale{ background:#7a4b17; }
+    @media(max-width:760px){ .app-title{font-size:13px; max-width:36%;} #data-status{max-width:60%;} }
 
     /* 首访欢迎弹窗 */
     .modal.hidden{ display:none; }
@@ -67,6 +71,7 @@
   <header id="app-header" class="app-header">
     <div class="app-header__inner">
       <h1 class="app-title">California Wildfire Monitoring Dashboard</h1>
+      <div id="data-status" aria-live="polite" aria-label="Data freshness"></div>
       <!-- 右侧可以放 About / 数据说明 / GitHub 链接（可选） -->
       <!-- <a class="app-link" href="#" style="color:#cbd5e1;text-decoration:none;">About</a> -->
     </div>

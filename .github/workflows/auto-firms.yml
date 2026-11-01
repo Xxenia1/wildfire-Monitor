@@ -1,8 +1,8 @@
-name: Auto fetch FIRMS (CA)
+name: Update fire snapshots (CA)
 
 on:
   schedule:
-    - cron: "0 14 * * *"   # UTC-5, every day at 9:00 am American/Chicago time
+    - cron: "7,37 * * * *"   # About every 30 minutes; avoid the top-of-hour load.
   workflow_dispatch: {}      # mannual trigger
   push:
     paths:
@@ -29,21 +29,45 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Run fetch script
+      - name: Fetch CAL FIRE
+        id: calfire
+        continue-on-error: true
+        run: npm run fetch:calfire
+
+      - name: Fetch WFIGS perimeters
+        id: wfigs
+        continue-on-error: true
+        run: npm run fetch:wfigs
+
+      - name: Fetch FIRMS
+        id: firms
+        continue-on-error: true
         env:
           FIRMS_KEY: ${{ secrets.FIRMS_KEY }}
           FIRMS_SOURCE: VIIRS_SNPP_NRT   # 可改为 VIIRS_NOAA20_NRT / VIIRS_NOAA21_NRT
-          FIRMS_DAY: "1"                 # 最近1天（1..10）
+          FIRMS_DAY: "1"
         run: npm run fetch:firms
 
-      - name: Commit changes if any
+      - name: Check public data for credential-bearing URLs
+        run: npm run check:public-data
+
+      - name: Commit successful snapshots
         run: |
-          if [[ -n "$(git status --porcelain)" ]]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add public/data/*.geojson
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for file in public/data/firms_ca_latest.geojson public/data/firms_ca_recent.geojson public/data/calfire_incidents_latest.geojson public/data/wfigs_perimeters_latest.geojson; do
+            if [[ -f "$file" ]]; then git add "$file"; fi
+          done
+          if ! git diff --cached --quiet; then
             git commit -m "chore(data): update FIRMS CA GeoJSON (auto)"
-            git push
+            if ! git push; then
+              git pull --rebase origin "$GITHUB_REF_NAME"
+              git push
+            fi
           else
             echo "No changes to commit."
           fi
+
+      - name: Report fetch failures
+        if: steps.calfire.outcome == 'failure' || steps.firms.outcome == 'failure' || steps.wfigs.outcome == 'failure'
+        run: exit 1

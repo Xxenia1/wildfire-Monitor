@@ -143,9 +143,14 @@ def validate_grid(doc):
 def to_velocity_json(doc):
     # Convert the mesh to leaflet-velocity compatible JSON (two objects: u, v)
     meta = doc["meta"]; u = doc["u10"]; v = doc["v10"]
+    # Regional display needs fewer samples than the original HRRR grid.
+    # This keeps each Git snapshot small while retaining the full-area wind pattern.
+    stride = 4
+    u = [row[::stride] for row in u[::stride]]
+    v = [row[::stride] for row in v[::stride]]
     ny, nx = len(u), len(u[0])
     west,south,east,north = meta["bbox"]
-    dx, dy = meta["dx"], meta["dy"]
+    dx, dy = meta["dx"] * stride, meta["dy"] * stride
     refTime = meta.get("timestamp","")
 
     # Flattened (row-major, rows: north->south; columns: west->east)
@@ -154,7 +159,7 @@ def to_velocity_json(doc):
     header_base = {
         "nx": nx, "ny": ny,
         "lo1": west, "la1": north,  # upper-left
-        "lo2": east, "la2": south,  # lower-right
+        "lo2": west + (nx - 1) * dx, "la2": north - (ny - 1) * dy,
         "dx": dx, "dy": dy,
         "refTime": refTime
     }

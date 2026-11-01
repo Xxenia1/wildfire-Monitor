@@ -1,14 +1,34 @@
 // visualization of wind mode（leaflet-velocity）
+import { setDataStatus, setDataError } from "./data_status.js";
 
 let windLayer = null;
 let windCtl = null;
+let refreshTimer = null;
 
 async function fetchVelocityJson() {
   // Add a timestamp to prevent caching
   const url = `./Data/Wind/wind_ca_velocity.json?t=${Date.now()}`;
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Fetch wind json failed: ${res.status}`);
-  return res.json();
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Fetch wind json failed: ${res.status}`);
+    const grid = await res.json();
+    if (!Array.isArray(grid) || !grid[0]?.header?.refTime) throw new Error("Invalid wind snapshot");
+    setDataStatus("Wind", grid[0].header.refTime, 36 * 60 * 60 * 1000);
+    return grid;
+  } catch (error) {
+    setDataError("Wind");
+    throw error;
+  }
+}
+
+async function refreshWind() {
+  const data = await fetchVelocityJson();
+  if (windLayer && typeof windLayer.setData === "function") windLayer.setData(data);
+  else if (windLayer?._map) {
+    const map = windLayer._map;
+    map.removeLayer(windLayer);
+    windLayer = L.velocityLayer({ data, maxVelocity: 25, velocityScale: 0.015, particleMultiplier: 0.008, opacity: 0.9, lineWidth: 1 }).addTo(map);
+  }
 }
 
 //Use Leaflet Control to make a small toolbar that only appears in wind mode
@@ -27,15 +47,7 @@ function makeControl(map) {
 
       div.querySelector('#wind-refresh').onclick = async () => {
         try {
-          const data = await fetchVelocity();
-          if (windLayer && typeof windLayer.setData === 'function') {
-            windLayer.setData(data);
-          } else if (windLayer) {
-            const m = windLayer._map;
-            m.removeLayer(windLayer);
-            windLayer = L.velocityLayer({ data, maxVelocity: 25, velocityScale: 0.015, particleMultiplier: 0.008, opacity: 0.9, lineWidth: 1 });
-            windLayer.addTo(m);
-          }
+          await refreshWind();
         } catch (e) { console.error(e); alert('刷新失败'); }
       };
 
@@ -80,11 +92,12 @@ export async function enableWind(map) {
   //only show the control when wind mode is enabled
   windCtl = makeControl(map);
   map.addControl(windCtl);
+  refreshTimer = setInterval(() => refreshWind().catch(error => console.warn("Wind refresh failed:", error)), 60 * 60 * 1000);
 }
 
 export function disableWind(map) {
-  if (!windLayer) return;
-  map.removeLayer(windLayer);
-  windLayer = null;
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+  if (windLayer) { map.removeLayer(windLayer); windLayer = null; }
+  if (windCtl) { map.removeControl(windCtl); windCtl = null; }
 }
 

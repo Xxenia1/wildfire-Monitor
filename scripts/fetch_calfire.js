@@ -54,7 +54,16 @@ async function fetchJSON(url) {
   return r.json();
 }
 function ensureDir(p) { if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true }); }
-async function saveJSON(p, obj) { ensureDir(path.dirname(p)); fs.writeFileSync(p, JSON.stringify(obj)); }
+async function saveJSON(p, obj) {
+  ensureDir(path.dirname(p));
+  const temp = `${p}.tmp`;
+  fs.writeFileSync(temp, JSON.stringify(obj));
+  fs.renameSync(temp, p);
+}
+async function saveSnapshot(gj) {
+  if (!Array.isArray(gj?.features)) throw new Error("Invalid CAL FIRE GeoJSON; existing snapshot was preserved");
+  await saveJSON(OUT_FILE, { ...gj, fetched_at_utc: new Date().toISOString() });
+}
 
 // ========== Filter：Only Keep“24h（PT）” ==========
 function filterGeoJSON_last24h(gj) {
@@ -93,13 +102,14 @@ async function main() {
   // 1)  GeoJSON -> save -> filter the recent 24h
   try {
     const rawGeo = await fetchJSON(URL_GEO);
+    if (!Array.isArray(rawGeo?.features)) throw new Error("Invalid GeoJsonList response");
     if (SAVE_DEBUG) await saveJSON(DBG_GEO, rawGeo);
     console.log("GeoJsonList features:", rawGeo?.features?.length ?? 0);
 
     const only24 = filterGeoJSON_last24h(rawGeo);
     console.log("GeoJsonList (last 24h) features:", only24.features.length);
 
-    await saveJSON(OUT_FILE, only24);
+    await saveSnapshot(only24);
     console.log(`wrote ${OUT_FILE}`);
     return;
   } catch (e) {
@@ -109,13 +119,14 @@ async function main() {
   // 2) List(JSON) -> save -> convert to GeoJSON -> filter near 24h
   try {
     const rawList = await fetchJSON(URL_LIST);
+    if (!Array.isArray(rawList)) throw new Error("Invalid List response");
     if (SAVE_DEBUG) await saveJSON(DBG_LIST, rawList);
     console.log(" List return number:", Array.isArray(rawList) ? rawList.length : 0);
 
     const only24 = listJSON_to_last24h_GeoJSON(rawList);
     console.log(" List after conversion (nearly 24h) features:", only24.features.length);
 
-    await saveJSON(OUT_FILE, only24);
+    await saveSnapshot(only24);
     console.log(` wrote ${OUT_FILE}`);
     return;
   } catch (e) {
@@ -126,7 +137,7 @@ async function main() {
   try {
     const gj = await fetchJSON(FALLBACK_ARCGIS);
     console.log("⚠️ Using ArcGIS spare tires, features:", gj?.features?.length ?? 0);
-    await saveJSON(OUT_FILE, gj);
+    await saveSnapshot(gj);
   } catch (e) {
     console.error("ArcGIS fallback failed:", e.message);
     process.exit(1);

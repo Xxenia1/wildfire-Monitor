@@ -2,6 +2,7 @@ import { enableWind, disableWind } from './wind_mode.js';
 import { enableFire, disableFire } from './Fire_Mode.js';
 import { initSmokeMode, removeSmokeMode } from "./smoke_mode.js";
 import { initNdviMode, removeNdviMode } from './ndvi_mode.js';
+import { setActiveMode } from './data_status.js';
 
 
 window.map = L.map('map').setView([37.5, -119.5], 7);
@@ -11,12 +12,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 
 // ---- smoke wrappers ----
 async function enableSmoke() {
-  await initSmokeMode(map, { 
-    bbox: [-125, 32, -113, 43.5],
-    //maxAgeMin: 60, 
-    n: 500, 
-    cacheTtl: 600, 
-    refreshSec: 0 });
+  await initSmokeMode(map, { refreshSec: 300 });
 }
 function disableSmoke() { removeSmokeMode(map); }
 
@@ -32,8 +28,9 @@ async function closeMode(mode){
 }
 
 async function switchMode(mode) {
-  if (mode === state.current) { await closeMode(mode); state.current = null; updateBtns(); return; }
-  if (state.current) await closeMode(state.current);
+  if (mode === state.current) { await closeMode(mode); state.current = null; setActiveMode(null); updateBtns(); return; }
+  if (state.current) { await closeMode(state.current); state.current = null; }
+  setActiveMode(mode);
 
   try {
     if (mode === 'wind')  { await enableWind(map);  state.wind  = true; }
@@ -41,7 +38,7 @@ async function switchMode(mode) {
     if (mode === 'smoke') { await enableSmoke();    state.smoke = true; }
     if (mode === 'ndvi')  { await initNdviMode(map); state.ndvi = true; }
     state.current = mode;
-  } catch(e){ console.error(e); alert('Loading failed, please try again later'); }
+  } catch(e){ setActiveMode(null); console.error(e); alert('Loading failed, please try again later'); }
 
   updateBtns();
 }

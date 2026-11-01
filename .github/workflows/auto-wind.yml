@@ -5,6 +5,9 @@ on:
     - cron: '0 14 * * *'  # UTC-5, every day at 9:00 am American/Chicago time
   workflow_dispatch:       # mannual trigger
 
+permissions:
+  contents: write
+
 jobs:
   fetch-wind:
     runs-on: ubuntu-latest
@@ -28,13 +31,17 @@ jobs:
 
       - name: Validate wind JSON and build velocity json
         run: |
-          python Backend/validate_wind.py Wind/wind_ca_latest.json Wind
+          python Backend/validate_wind.py Data/Wind/wind_ca_latest.json Data/Wind
 
       - name: Commit & push new wind data
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add Data/Wind/wind_ca_latest.json
           git add Data/Wind/wind_ca_velocity.json
-          git commit -m "auto: update wind data" || echo "No changes to commit"
-          git push || true
+          if ! git diff --cached --quiet; then
+            git commit -m "auto: update wind data"
+            if ! git push; then
+              git pull --rebase origin "$GITHUB_REF_NAME"
+              git push
+            fi
+          fi

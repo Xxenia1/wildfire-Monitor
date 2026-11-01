@@ -1,5 +1,6 @@
 // ========================== Fire_Mode.js (merged: old WFIGS + new UI + fixed CAL FIRE popups) ==========================
 // Fire = WFIGS perimeters (polygons) + FIRMS hotspots (points) + CAL FIRE incidents
+import { setDataStatus, setDataError } from "./data_status.js";
 
 // --------- Basic tools ---------
 function assetUrl(relPath) {
@@ -25,27 +26,10 @@ async function fetchJSON(url) {
 }
 
 // --------- Constants ---------
-const CA_BBOX = [-125, 32, -113, 43.5]; // [W,S,E,N]
-const WFIGS_QUERY =
-  "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query";
-
 // 你的本地数据路径固定在 public/data/
+const WFIGS_URL  = assetUrl("public/data/wfigs_perimeters_latest.geojson");
 const FIRMS_URL   = assetUrl("public/data/firms_ca_latest.geojson");
 const CALFIRE_URL = assetUrl("public/data/calfire_incidents_latest.geojson");
-
-function buildPerimeterUrl() {
-  const p = new URLSearchParams({
-    f: "geojson",
-    where: "1=1",
-    outFields: "*",
-    outSR: "4326",
-    geometry: CA_BBOX.join(","),
-    geometryType: "esriGeometryEnvelope",
-    inSR: "4326",
-    spatialRel: "esriSpatialRelIntersects"
-  });
-  return `${WFIGS_QUERY}?${p.toString()}`;
-}
 
 const COLOR = {
   danger: "#e53935",
@@ -57,7 +41,7 @@ const COLOR = {
 const isNum = (n) => Number.isFinite(n);
 
 // ---- Progression (FIRMS daily) quick overlay ----
-const PROG_LAST_N_DAYS = 7;        // 显示最近 N 天
+const PROG_LAST_N_DAYS = 5;        // FIRMS Area API supports a five-day window.
 const PROG_SEARCH_RADIUS_KM = 60;  // 只取离所选火场中心 60km 内的点，避免全州混入
 const PROG_CIRCLE_RADIUS_M = 350;  // 每个热点画 350m 的圆，叠出“蔓延面”的感觉
 const PROG_COLORS = [              // 天数不够会循环
@@ -640,37 +624,43 @@ export async function enableFire() {
 
   // 1) WFIGS perimeters
   try {
-    const perimGeo = await fetchJSON(buildPerimeterUrl());
+    const perimGeo = await fetchJSON(WFIGS_URL);
+    setDataStatus("WFIGS", perimGeo.fetched_at_utc, 90 * 60 * 1000);
     _perimLayer = L.geoJSON(perimGeo, {
       filter: validPerimeter,
       style: perimStyle,
       onEachFeature: perimPopup
     }).addTo(_group);
   } catch (e) {
+    setDataError("WFIGS");
     console.warn("WFIGS perimeters load failed:", e);
   }
 
   // 2) FIRMS hotspots
   try {
     const firmsGeo = await fetchJSON(FIRMS_URL);
+    setDataStatus("FIRMS", firmsGeo.fetched_at_utc, 90 * 60 * 1000);
     _firmsLayer = L.geoJSON(firmsGeo, {
       filter: validFirmsPoint,
       pointToLayer: firmsMarker,
       onEachFeature: firmsPopup
     }).addTo(_group);
   } catch (e) {
+    setDataError("FIRMS");
     console.warn("FIRMS hotspots load failed:", e);
   }
 
   // 3) CAL FIRE incidents
   try {
     const calGeo = await fetchJSON(CALFIRE_URL);
+    setDataStatus("CAL FIRE", calGeo.fetched_at_utc, 90 * 60 * 1000);
     _calfireLayer = L.geoJSON(calGeo, {
       pointToLayer: (feat, latlng) => calfirePoint(latlng, feat),
       style: calfireStyle,
       onEachFeature: calfireOnEach
     }).addTo(_group);
   } catch (e) {
+    setDataError("CAL FIRE");
     console.warn("CAL FIRE incidents load failed:", e);
   }
 
@@ -680,28 +670,36 @@ export async function enableFire() {
   ensureFireSubFilters(map);
   rebuildFireList();
 
-  // Unified refresh each 60 min
+  // Browser refreshes shared snapshots; only the scheduled job calls providers.
   clearInterval(_refreshTimer);
   _refreshTimer = setInterval(async () => {
-    try {
-      if (_perimLayer) {
-        const freshPerim = await fetchJSON(buildPerimeterUrl());
-        _perimLayer.clearLayers(); _perimLayer.addData(freshPerim);
+    const layers = [
+      [_perimLayer, WFIGS_URL, "WFIGS"],
+      [_firmsLayer, FIRMS_URL, "FIRMS"],
+      [_calfireLayer, CALFIRE_URL, "CAL FIRE"],
+    ];
+    await Promise.all(layers.map(async ([layer, url, name]) => {
+      try {
+        const fresh = await fetchJSON(url);
+        if (!Array.isArray(fresh?.features)) throw new Error(`Invalid ${name} snapshot`);
+        if (layer) {
+          const previous = layer.getLayers();
+          try { layer.clearLayers(); layer.addData(fresh); }
+          catch (error) {
+            layer.clearLayers();
+            previous.forEach(item => layer.addLayer(item));
+            throw error;
+          }
+        }
+        setDataStatus(name, fresh.fetched_at_utc, 90 * 60 * 1000);
+      } catch (e) {
+        setDataError(name);
+        console.warn(`${name} snapshot refresh failed:`, e);
       }
-      if (_firmsLayer) {
-        const freshFirms = await fetchJSON(FIRMS_URL);
-        _firmsLayer.clearLayers(); _firmsLayer.addData(freshFirms);
-      }
-      if (_calfireLayer) {
-        const freshCal = await fetchJSON(CALFIRE_URL);
-        _calfireLayer.clearLayers(); _calfireLayer.addData(freshCal);
-      }
-      applyFireFilters();
-      rebuildFireList();
-    } catch (e) {
-      console.warn("Fire mode refresh failed:", e);
-    }
-  }, 60 * 60 * 1000);
+    }));
+    applyFireFilters();
+    rebuildFireList();
+  }, 5 * 60 * 1000);
 
   return _group;
 }
@@ -781,20 +779,22 @@ async function showFirmsProgressionForPerimeter(perimFeature, days=PROG_LAST_N_D
   // 用你文件里已有的工具函数：getFeatureCenter(f)（在末尾 Utils 里）
   const [cx, cy] = getFeatureCenter(perimFeature); // [lng, lat]
   const dates = lastNDates(days);
+  const recent = await tryFetchJSON(assetUrl("public/data/firms_ca_recent.geojson"));
+  if (!Array.isArray(recent?.features)) {
+    alert("最近几天的 FIRMS 数据暂不可用。");
+    return;
+  }
 
   const layerGroups = [];
   const legendItems = [];
 
   for (let i=dates.length-1; i>=0; i--){
     const d = dates[i];
-    const url = `public/data/firms_ca_${d}.geojson`; // 你的命名
-    const gj = await tryFetchJSON(url);
-    if (!gj || !gj.features) continue;
-
     const color = PROG_COLORS[(dates.length-1 - i) % PROG_COLORS.length];
     const g = L.layerGroup([], { pane: "firmsPane" });
 
-    for (const f of gj.features){
+    for (const f of recent.features){
+      if (f.properties?.acq_date !== d) continue;
       const gmr = f.geometry;
       if (!gmr || gmr.type!=="Point") continue;
       const [lng, lat] = gmr.coordinates;
