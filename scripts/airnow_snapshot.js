@@ -16,6 +16,12 @@ function finiteValue(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function isCaliforniaSite(siteId) {
+  // AQS site IDs start with the two-digit state FIPS code, optionally after 840.
+  // AirNow also reports temporary California monitors with MMCA IDs.
+  return /^(?:840)?06/.test(siteId) || /^MMCA/i.test(siteId);
+}
+
 export function normalizeAirNow(rows, fetchedAt = new Date()) {
   if (!Array.isArray(rows)) throw new Error("AirNow response is not an array");
   const bySite = new Map();
@@ -30,6 +36,7 @@ export function normalizeAirNow(rows, fetchedAt = new Date()) {
     if (lat === null || lon === null || aqi === null || !observed) continue;
     if (lat < CA_BBOX[1] || lat > CA_BBOX[3] || lon < CA_BBOX[0] || lon > CA_BBOX[2] || aqi < 0 || aqi > 500) continue;
     const siteId = String(row.AQSID ?? row.FullAQSCode ?? `${lat},${lon}`);
+    if (!isCaliforniaSite(siteId)) continue;
     const pm = finiteValue(row.RawConcentration);
     const feature = {
       type: "Feature",

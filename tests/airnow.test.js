@@ -16,10 +16,11 @@ test("AirNow request uses one California hourly bbox and a bounded time window",
 
 test("AirNow site data keeps the newest PM2.5 AQI and excludes invalid records", () => {
   const records = [
-    { AQSID: "A", Parameter: "PM2.5", Latitude: 37, Longitude: -120, AQI: 60, UTC: "2026-11-01T20:00", RawConcentration: 16 },
-    { AQSID: "A", Parameter: "PM25", Latitude: 37, Longitude: -120, AQI: 80, UTC: "2026-11-01T21:00", RawConcentration: 24 },
-    { AQSID: "B", Parameter: "OZONE", Latitude: 37, Longitude: -119, AQI: 25, UTC: "2026-11-01T21:00" },
-    { AQSID: "C", Parameter: "PM2.5", Latitude: 48, Longitude: -120, AQI: 50, UTC: "2026-11-01T21:00" },
+    { AQSID: "060450006", Parameter: "PM2.5", Latitude: 37, Longitude: -120, AQI: 60, UTC: "2026-11-01T20:00", RawConcentration: 16 },
+    { AQSID: "060450006", Parameter: "PM25", Latitude: 37, Longitude: -120, AQI: 80, UTC: "2026-11-01T21:00", RawConcentration: 24 },
+    { AQSID: "060450007", Parameter: "OZONE", Latitude: 37, Longitude: -119, AQI: 25, UTC: "2026-11-01T21:00" },
+    { AQSID: "060450008", Parameter: "PM2.5", Latitude: 48, Longitude: -120, AQI: 50, UTC: "2026-11-01T21:00" },
+    { AQSID: "410330036", Parameter: "PM2.5", Latitude: 42, Longitude: -123, AQI: 50, UTC: "2026-11-01T21:00" },
   ];
   const snapshot = normalizeAirNow(records, new Date("2026-11-01T22:00:00Z"));
   assert.equal(snapshot.features.length, 1);
@@ -41,7 +42,7 @@ test("AirNow fetch writes a key-free snapshot and keeps it after an API failure"
     globalThis.fetch = async url => {
       assert.equal(url.searchParams.get("API_KEY"), "test-secret");
       return new Response(JSON.stringify([{
-        AQSID: "A", SiteName: "Monitor A", Parameter: "PM2.5", Latitude: 37,
+        AQSID: "060450006", SiteName: "Monitor A", Parameter: "PM2.5", Latitude: 37,
         Longitude: -120, AQI: 85, UTC: observed, RawConcentration: 25,
       }]), { status: 200 });
     };
