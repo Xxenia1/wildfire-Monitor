@@ -8,7 +8,7 @@ The live layers use shared files produced by scheduled GitHub Actions jobs. Fire
 Set `FIRMS_KEY` and `AIRNOW_API_KEY` as GitHub Actions repository secrets. The website's Smoke mode reads the scheduled AirNow snapshot. `Backend/fetch_smoke.py` remains an optional manual archive utility and is not used by the website. Never commit real keys or complete API request URLs.
 
 ## Brief Introduction:
-- The wildfire monitoring platform aims to provide an interactive, real-time monitoring platform for tracking real-time wildfires, wind speed/direction, smoke dispersion, and vegetation health in California. 
+- The dashboard maps recent wildfire detections, wind, PM₂.₅ monitoring-site observations, and historical vegetation imagery for California.
 - Scheduled GitHub Actions jobs collect NASA FIRMS VIIRS fire detections, WFIGS perimeters, CAL FIRE incidents, NOAA HRRR wind, and EPA AirNow PM₂.₅ monitoring-site observations. NDVI imagery is displayed from historical files.
 - At the front end, the dashboard employs *Leaflet.js* for interactive mapping, *D3.js* for dynamic charts and animations, and *turf.js* for spatial analyses—generating predictive fire-spread buffers, urban-impact overlays, and population-risk estimations.
 ### Audience:
@@ -31,14 +31,14 @@ All satellite data can be used directly in GEE, because it combines a multi-peta
 | City Boundaries | OpenStreetMap | Overlays predicted fire zones to identify at-risk cities |
 
 ## Deliverable:
-The final deliverable is an interactive web-based wildfire monitoring system that displays real-time wildfire activities, wind patterns, and smoke dispersion with the ability to switch between different data layers. It includes four modes and three built-in impact analyses:
+The dashboard lets visitors switch between four layers: recent fire activity, wind, PM₂.₅ observations, and historical NDVI imagery.
 
 1. Fire mode: overlays real-time fire detections (active fires and perimeters) from the CAL FIRE FIRS API Key and VIIRS satellite imagery. 
 - Each fire is represented by a point feature, placed at its geolocation.
 -  Point size corresponds to Fire Radiative Power (FRP) or confidence level, allowing users to see which fires are most intense.
 - Color ramp (yellow → orange → red) indicates fire age (new detections in yellow, older detections in red) or burn severity, depending on data source.
 - Interactive popup provides detailed metadata for each fire: e.g., detection timestamp, FRP value, confidence score, geolocation.
-2. Wind mode: overlays animated wind speed and direction from NOAA HRRR, which updates every hour. 
+2. Wind mode: overlays animated wind speed and direction from NOAA HRRR; the scheduled snapshot updates daily.
 - On top of the basemap, a full‐screen Canvas (or WebGL) layer renders “wind particles” that move continuously in the direction of the local wind vector.
 - Particles are seeded randomly across the viewport; each particle’s velocity is interpolated from the nearest grid‐point U/V values (bilinear interpolation).
 - Speed: a particle’s motion speed is proportional to the local wind speed
@@ -47,7 +47,7 @@ The final deliverable is an interactive web-based wildfire monitoring system tha
 3. Smoke mode: shows preliminary PM₂.₅ air-quality observations from EPA AirNow monitoring sites. It does not show a smoke-dispersion forecast.
 - Point markers use AirNow's reported AQI and the corresponding EPA AQI colors. Raw PM₂.₅ concentration is shown only when AirNow supplies it.
 - Users can toggle on/off.
-4. NDVI time-series: animates NDVI changes over time. (2024~present)
+4. NDVI time-series: animates historical NDVI changes (2024).
 - Once select , the animation will display on the side bar along with D3 line chart (vegetation index over time).
 5. Interactive controls: 
 - Layer toggles: users can switch between fire, wind, and smoke modes.
