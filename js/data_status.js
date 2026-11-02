@@ -5,6 +5,8 @@ const modes = {
   smoke: ["Smoke"],
   ndvi: ["NDVI"],
 };
+const timeKinds = { WFIGS: "fetched", FIRMS: "fetched", "CAL FIRE": "fetched", Wind: "model", Smoke: "observed" };
+const displayNames = { Smoke: "AirNow PM₂.₅" };
 let activeMode = "fire";
 
 function render() {
@@ -12,23 +14,26 @@ function render() {
   if (!host) return;
   host.replaceChildren();
   for (const name of modes[activeMode] || []) {
+    const displayName = displayNames[name] || name;
     const value = state.get(name);
     const badge = document.createElement("span");
     badge.className = "data-status-badge";
     if (name === "NDVI") {
       badge.textContent = "NDVI: historical (2024)";
     } else if (!value) {
-      badge.textContent = `${name}: loading`;
+      badge.textContent = `${displayName}: loading`;
     } else if (!value.timestamp) {
       badge.classList.add("data-status-stale");
-      badge.textContent = `${name}: ${value.failed ? "unavailable" : "update time unknown"}`;
+      badge.textContent = `${displayName}: ${value.failed ? "unavailable" : "update time unknown"}`;
     } else {
       const age = Date.now() - Date.parse(value.timestamp);
       const stale = value.failed || !Number.isFinite(age) || age > value.maxAgeMs;
       if (stale) badge.classList.add("data-status-stale");
-      const time = new Date(value.timestamp).toLocaleString();
-      badge.textContent = `${name}: ${time}${stale ? " (old)" : ""}`;
-      badge.title = `Last successful data fetch: ${time}${value.failed ? "; latest refresh failed" : ""}`;
+      const date = new Date(value.timestamp);
+      const time = date.toLocaleString();
+      const shortTime = date.toLocaleString(undefined, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+      badge.textContent = `${displayName} ${timeKinds[name] || "updated"}: ${shortTime}${stale ? " (old)" : ""}`;
+      badge.title = `${timeKinds[name] === "fetched" ? "Snapshot fetched" : "Data time"}: ${time}${name === "WFIGS" ? "; individual perimeters can be older" : ""}${value.failed ? "; latest refresh failed" : ""}`;
     }
     host.appendChild(badge);
   }

@@ -87,14 +87,15 @@ function addLegend(map) {
 
 function addInfo(map) {
   if (infoControl) map.removeControl(infoControl);
-  infoControl = L.control({ position: "topright" });
+  infoControl = L.control({ position: window.matchMedia("(max-width: 700px)").matches ? "topleft" : "topright" });
   infoControl.onAdd = function () {
     const div = L.DomUtil.create("div", "info");
     div.style.padding = "6px 8px";
     div.style.background = "white";
     div.style.borderRadius = "6px";
     div.style.boxShadow = "0 1px 4px rgba(0,0,0,0.2)";
-    div.innerHTML = `<b>Air quality (EPA AirNow)</b><div id="smoke-meta" style="font-size:12px;color:#666">Loading…</div>`;
+    div.className = "smoke-info panel";
+    div.innerHTML = `<b>PM₂.₅ air quality (EPA AirNow)</b><div id="smoke-meta">Loading…</div>`;
     return div;
   };
   infoControl.addTo(map);
@@ -106,7 +107,7 @@ function updateInfo(meta) {
   const observed = meta?.observed ?? null;
   const fetched = meta?.fetched ?? null;
   el.textContent = observed
-    ? `Observed: ${new Date(observed).toLocaleString()} · Fetched: ${new Date(fetched).toLocaleString()} · Preliminary`
+    ? `Observed: ${new Date(observed).toLocaleString()}\nFetched: ${new Date(fetched).toLocaleString()} · Preliminary`
     : "Observation time unavailable";
 }
 

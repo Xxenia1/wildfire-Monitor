@@ -6,8 +6,9 @@ import { setActiveMode } from './data_status.js';
 
 
 window.map = L.map('map').setView([37.5, -119.5], 7);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; OpenStreetMap & CARTO', subdomains: 'abcd', maxZoom: 20
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+  maxZoom: 19
 }).addTo(map);
 
 // ---- smoke wrappers ----
@@ -33,7 +34,7 @@ async function switchMode(mode) {
   setActiveMode(mode);
 
   try {
-    if (mode === 'wind')  { await enableWind(map);  state.wind  = true; }
+    if (mode === 'wind')  { await enableWind(map, () => switchMode('wind')); state.wind = true; }
     if (mode === 'fire')  { await enableFire();     state.fire  = true; }
     if (mode === 'smoke') { await enableSmoke();    state.smoke = true; }
     if (mode === 'ndvi')  { await initNdviMode(map); state.ndvi = true; }
@@ -47,19 +48,10 @@ function createModeToolbar() {
   const div = document.createElement('div');
   div.className = 'mode-toolbar';
 
-  // 关键：内联定位，放到标题栏下方
-  div.style.position = 'fixed';
-  div.style.zIndex   = '1001';                         // 高于地图
-  div.style.left     = '12px';
-  div.style.top      = 'calc(var(--header-h) + 8px)';  // 标题高度 + 间距
-  // 如果你担心没有 --header-h，也可以用回退值：
-  // const h = getComputedStyle(document.documentElement).getPropertyValue('--header-h')?.trim() || '56px';
-  // div.style.top = `calc(${h} + 8px)`;
-
   div.innerHTML = `
     <button class="mode-btn" data-mode="wind">Wind</button>
     <button class="mode-btn" data-mode="fire">Fire</button>
-    <button class="mode-btn" data-mode="smoke">Smoke</button>
+    <button class="mode-btn" data-mode="smoke">Air Quality</button>
     <button class="mode-btn" data-mode="ndvi">NDVI</button>
   `;
 

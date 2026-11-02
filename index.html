@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Wildfire-Monitor Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
@@ -30,7 +31,7 @@
     /* 让地图避开顶部标题栏 */
     #map{
       position:absolute; left:0; right:0; bottom:0;
-      top:var(--header-h);
+      top:var(--header-h); height:auto;
     }
     /* 顶部标题栏 */
     .app-header{
@@ -42,11 +43,18 @@
       height:100%; display:flex; align-items:center; justify-content:space-between;
       padding:0 16px; gap:12px;
     }
-    .app-title{ margin:0; font-size:18px; font-weight:700; letter-spacing:.3px; }
-    #data-status{ display:flex; gap:6px; overflow-x:auto; white-space:nowrap; font-size:11px; }
+    .app-title{ margin:0; font-size:18px; font-weight:700; letter-spacing:.3px; white-space:nowrap; }
+    #data-status{ display:flex; gap:6px; overflow-x:auto; white-space:nowrap; font-size:11px; min-width:0; }
     .data-status-badge{ padding:4px 7px; border-radius:5px; background:#214c37; color:#fff; }
     .data-status-stale{ background:#7a4b17; }
-    @media(max-width:760px){ .app-title{font-size:13px; max-width:36%;} #data-status{max-width:60%;} }
+    @media(max-width:1100px){
+      :root { --header-h: 88px; }
+      .app-header__inner { box-sizing:border-box; flex-direction:column; align-items:stretch; justify-content:center; gap:6px; padding:6px 12px; }
+      .app-title { font-size:16px; overflow:hidden; text-overflow:ellipsis; }
+      #data-status { width:100%; max-width:100%; padding-bottom:2px; scrollbar-width:thin; }
+      .data-status-badge { flex:none; }
+    }
+    @media(max-width:760px){ .app-title { font-size:14px; } }
 
     /* 首访欢迎弹窗 */
     .modal.hidden{ display:none; }
@@ -70,7 +78,7 @@
   <!-- 顶部标题栏 -->
   <header id="app-header" class="app-header">
     <div class="app-header__inner">
-      <h1 class="app-title">California Wildfire Monitoring Dashboard</h1>
+      <h1 class="app-title">California Wildfire Monitor</h1>
       <div id="data-status" aria-live="polite" aria-label="Data freshness"></div>
       <!-- 右侧可以放 About / 数据说明 / GitHub 链接（可选） -->
       <!-- <a class="app-link" href="#" style="color:#cbd5e1;text-decoration:none;">About</a> -->
@@ -83,12 +91,12 @@
       <h2 id="welcome-title">Welcome 👋</h2>
       <p>
         Welcome to the <b>California Wildfire Monitoring Dashboard</b>.
-        Data layers include <b>WFIGS perimeters</b>, <b>FIRMS hotspots</b>, and <b>CAL FIRE incidents</b>.
+        Explore fire reports, wind, EPA AirNow PM₂.₅ air quality, and historical 2024 NDVI imagery.
       </p>
       <ul class="modal-list">
-        <li>Use the <b>Wind / Fire / Smoke / NDVI</b> buttons to switch modes.</li>
+        <li>Use the <b>Wind / Fire / Air Quality / NDVI</b> buttons to switch modes.</li>
         <li>Click a <b>perimeter</b> or a <b>🔥 incident</b> to view details.</li>
-        <li>The right panel offers filters; the legend explains symbology.</li>
+        <li>Fire reports include their own report dates; a recent data fetch does not make every incident current.</li>
       </ul>
       <label class="modal-check">
         <input type="checkbox" id="welcome-noshow" checked/>

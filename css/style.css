@@ -346,41 +346,39 @@ html, body {
   margin-bottom: 12px;
 }
 
-/* 让模式按钮出现在标题栏下方 */
-:root { --header-h: 56px; } /* 这行与你 index.html 里的高度保持一致 */
+/* Mode controls sit below the page header; map controls start below them. */
+:root { --header-h: 56px; }
 
-.mode-toolbar{
+.mode-toolbar {
   position: fixed;
-  top: calc(var(--header-h) + 8px); /* 标题栏高度 + 间距 */
+  top: calc(var(--header-h) + 8px);
   left: 12px;
-  z-index: 900;                      /* 低于标题栏(1000)，高于地图 */
+  z-index: 1200;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   padding: 6px;
-  background: rgba(255,255,255,.92);
+  background: rgba(255,255,255,.96);
   border: 1px solid rgba(0,0,0,.08);
   border-radius: 10px;
-  backdrop-filter: blur(6px);
   box-shadow: 0 2px 8px rgba(0,0,0,.12);
 }
+.mode-toolbar .mode-btn {
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #1e293b;
+  font: 600 14px/1.2 system-ui, sans-serif;
+  cursor: pointer;
+}
+.mode-toolbar .mode-btn.active {
+  background: #166534;
+  border-color: #166534;
+  color: #fff;
+}
 
-/* 可选：按钮小优化 */
-.mode-toolbar .mode-btn{
-  padding: 6px 10px;
-  border-radius: 8px;
-}
-.mode-toolbar .mode-btn.active{
-  box-shadow: inset 0 0 0 2px #4f46e5;
-}
-
-/* 小屏适配：左右留白，居中一点 */
-@media (max-width: 640px){
-  .mode-toolbar{
-    top: calc(var(--header-h) + 6px);
-    left: 8px; right: 8px;
-    justify-content: center;
-  }
-}
+#map .leaflet-top.leaflet-left { top: 58px; }
 
 
 .wind-toolbar{
@@ -388,6 +386,7 @@ html, body {
   padding: 6px; border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,.15);
 }
+.wind-help { max-width: 230px; margin: 0 0 6px; font-size: 12px; color: #334155; }
 .wind-btn{
   border: 1px solid #ddd; background:#fff; margin-right:6px;
   width:28px; height:28px; border-radius:6px; cursor:pointer;
@@ -583,21 +582,7 @@ html, body {
 #map .leaflet-control-attribution { order: 99; z-index: 900; }
 
 
-.mode-toolbar{
-  position:absolute; top:10px; left:10px; z-index:1000;
-  background:#fff; padding:6px 8px; border-radius:6px;
-  box-shadow:0 1px 4px rgba(0,0,0,.2);
-  font:14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  pointer-events:auto;
-}
-.mode-toolbar .mode-btn{
-  margin:0 6px 0 0; padding:4px 10px; cursor:pointer;
-  border:1px solid #ccc; border-radius:4px; background:#f7f7f7;
-  }
-.mode-toolbar .mode-btn.active{
-  background:#2b7; border-color:#2b7; color:#fff;
-  }
-  /* 通用小面板 */
+/* Shared map panels */
 .panel {
   background: rgba(255,255,255,0.92);
   backdrop-filter: blur(2px);
@@ -626,6 +611,8 @@ html, body {
 /* 侧边 Top5 列表 */
 .fire-list { width: 280px; max-height: 58vh; overflow:auto; }
 .fire-list .list { display: grid; gap: 8px; }
+.empty-state { margin: 8px 0 0; color: #475569; line-height: 1.4; }
+.panel-toggle { display: none; }
 .fire-item { border:1px solid rgba(0,0,0,0.08); border-radius:12px; padding:8px 10px; cursor:pointer; background:#fff; }
 .fire-item:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
 .fire-item .title { font-weight:600; margin-bottom:6px; }
@@ -654,6 +641,7 @@ html, body {
 /* CAL FIRE emoji 图标更清晰 */
 .calfire-icon { pointer-events: auto; }
 .calfire-pin { font-size:18px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35)); }
+.calfire-pin-final { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #64748b; border: 2px solid #fff; color: #fff; font-size: 14px; }
 .leaflet-pane.calfirePane,
 .leaflet-pane.calfirePane .leaflet-marker-icon,
 .calfire-icon,
@@ -666,6 +654,35 @@ html, body {
 
 /*NDVI Panel*/
 .ndvi-panel img { border-radius: 8px; box-shadow: 0 1px 2px rgb(0 0 0 / 6%); }
+.ndvi-panel { width: min(320px, calc(100vw - 30px)); max-height: 70vh; overflow-y: auto; }
+.ndvi-item { padding: 8px 0; border-top: 1px solid #e2e8f0; }
+.ndvi-item h3 { margin: 0 0 4px; font-size: 13px; }
+.ndvi-item p { margin: 0 0 6px; color: #475569; line-height: 1.4; }
+.ndvi-item button { border: 1px solid #94a3b8; border-radius: 6px; background: #fff; padding: 5px 8px; cursor: pointer; }
+.ndvi-item img { width: 100%; height: auto; display: block; margin-top: 8px; }
+.ndvi-panel .note { margin-bottom: 10px; }
+.smoke-info { max-width: 260px; }
+#smoke-meta { margin-top: 5px; font-size: 12px; color: #475569; white-space: pre-line; line-height: 1.4; }
+
+@media (max-width: 700px) {
+  .mode-toolbar { left: 8px; right: 8px; top: calc(var(--header-h) + 6px); justify-content: space-between; gap: 3px; padding: 4px; }
+  .mode-toolbar .mode-btn { flex: 1; padding: 7px 3px; font-size: 12px; white-space: nowrap; }
+  #map .leaflet-top.leaflet-left { top: 54px; }
+  #map .leaflet-top.leaflet-right { top: auto; bottom: 36px; right: 8px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; max-height: calc(100% - 100px); }
+  #map .leaflet-top.leaflet-right .leaflet-control { float: none; margin: 0; }
+  .fire-list, .fire-filters, .fire-legend { box-sizing: border-box; width: auto; max-height: none; padding: 5px 7px; }
+  .panel-toggle { display: block; border: 0; background: transparent; color: #14532d; font: 600 13px/1.2 system-ui, sans-serif; padding: 4px; cursor: pointer; }
+  .fire-list:not(.is-expanded) .panel-body,
+  .fire-filters:not(.is-expanded) .panel-body,
+  .fire-legend:not(.is-expanded) .panel-body { display: none; }
+  .fire-list.is-expanded, .fire-filters.is-expanded, .fire-legend.is-expanded { width: min(320px, calc(100vw - 24px)); max-height: min(46vh, 400px); overflow-y: auto; }
+  .fire-list.is-expanded .panel-toggle,
+  .fire-filters.is-expanded .panel-toggle,
+  .fire-legend.is-expanded .panel-toggle { margin-bottom: 5px; }
+  .ndvi-panel { max-height: min(48vh, 420px); }
+  .smoke-info { box-sizing: border-box; max-width: min(270px, calc(100vw - 24px)); }
+  .wind-toolbar { max-width: 180px; }
+}
 
 
 

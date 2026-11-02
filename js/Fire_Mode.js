@@ -1,6 +1,7 @@
 // ========================== Fire_Mode.js (merged: old WFIGS + new UI + fixed CAL FIRE popups) ==========================
 // Fire = WFIGS perimeters (polygons) + FIRMS hotspots (points) + CAL FIRE incidents
 import { setDataStatus, setDataError } from "./data_status.js";
+import { containmentPercent, reportTimeMs, isRecentUncontained, firmsConfidenceScore } from "./fire_data.js";
 
 // --------- Basic tools ---------
 function assetUrl(relPath) {
@@ -28,7 +29,7 @@ async function fetchJSON(url) {
 // --------- Constants ---------
 // 你的本地数据路径固定在 public/data/
 const WFIGS_URL  = assetUrl("public/data/wfigs_perimeters_latest.geojson");
-const FIRMS_URL   = assetUrl("public/data/firms_ca_latest.geojson");
+const FIRMS_URL   = assetUrl("public/data/firms_ca_recent.geojson");
 const CALFIRE_URL = assetUrl("public/data/calfire_incidents_latest.geojson");
 
 const COLOR = {
@@ -52,7 +53,11 @@ const PROG_COLORS = [              // 天数不够会循环
 // 可选：把普通 FIRMS 点也放大（你说太小）
 const FIRMS_RADIUS_MIN = 7;
 const FIRMS_RADIUS_MAX = 13;
-const FIRMS_RADIUS_BASE = 3;
+const RECENT_FIRE_MS = 30 * 24 * 60 * 60 * 1000;
+
+const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+})[char]);
 
 // --------- Containment gradient (0% red → 50% orange → 100% green) ---------
 function containmentColor(pct) {
@@ -72,8 +77,8 @@ function containmentColor(pct) {
 // ======================= WFIGS =======================
 function perimStyle(feature) {
   const p = feature?.properties ?? {};
-  const pct = p.percentcontained ?? p.poly_PercentContained ?? p.PERCENT_CONTAINED ?? 0;
-  const color = containmentColor(pct);
+  const pct = containmentPercent(p);
+  const color = pct === null ? "#64748b" : containmentColor(pct);
   return { color, weight: 2, fillColor: color, fillOpacity: 0.08, pane: "perimPane" };
 }
 
@@ -82,31 +87,28 @@ function perimPopup(feature, layer) {
   const name =
     p.incidentname || p.poly_IncidentName || p.IncidentName || "Fire";
   const acres = p.gisacres ?? p.poly_GISAcres ?? p.GISAcres ?? "—";
-  const pct =
-    p.percentcontained ?? p.poly_PercentContained ?? p.PERCENT_CONTAINED ?? "—";
-  const updated =
-    p.irwinmodifiedondate || p.modifiedondate || p.CreateDate || p.poly_CreateDate || "—";
-
-  const pctNum = Number(pct);
-  const badgeCls = Number.isFinite(pctNum)
-    ? (pctNum>=70 ? "badge-high" : (pctNum>=30 ? "badge-mid" : "badge-low"))
+  const pct = containmentPercent(p);
+  const reportMs = reportTimeMs(p);
+  const updated = reportMs === null ? "—" : new Date(reportMs).toLocaleString();
+  const badgeCls = pct !== null
+    ? (pct>=70 ? "badge-high" : (pct>=30 ? "badge-mid" : "badge-low"))
     : "badge-unk";
 
   layer.bindPopup(
     `<div class="panel popup-perim">
        <h4>🧭 WFIGS Perimeter</h4>
        <div class="kv">
-         <div class="k">Incident</div><div class="v">${name}</div>
-         <div class="k">Acres</div><div class="v">${acres}</div>
-         <div class="k">Contained</div><div class="v"><span class="badge ${badgeCls}">${pct}%</span></div>
-         <div class="k">Updated</div><div class="v">${updated}</div>
+         <div class="k">Incident</div><div class="v">${escapeHtml(name)}</div>
+         <div class="k">Acres</div><div class="v">${escapeHtml(acres)}</div>
+         <div class="k">Contained</div><div class="v"><span class="badge ${badgeCls}">${pct === null ? "Unknown" : `${pct}%`}</span></div>
+         <div class="k">Perimeter date</div><div class="v">${escapeHtml(updated)}</div>
        </div>
        <div class="note">Perimeter color = containment% (gradient).</div>
        <div class="ops" style="margin-top:8px">
         <button class="btn btn-primary" id="btn-prog-show">
-          Show the spread of the last${PROG_LAST_N_DAYS}days (FIRMS approximation)
+          Show nearby FIRMS detections (last ${PROG_LAST_N_DAYS} days)
         </button>
-        <button class="btn" id="btn-prog-hide">Hidden Spread</button>
+        <button class="btn" id="btn-prog-hide">Hide detections</button>
       </div>
      </div>`
   );
@@ -161,14 +163,9 @@ function validFirmsPoint(f) {
 
 function firmsMarker(feature, latlng) {
   const p = feature.properties ?? {};
-  let conf = p.confidence;
-  conf = (typeof conf === 'number')
-    ? conf
-    : (/^\d+(\.\d+)?$/.test(String(conf)) ? Number(conf) : 50);
-
-  const r = Number.isFinite(conf)
-  ? Math.max(FIRMS_RADIUS_MIN, Math.min(FIRMS_RADIUS_MAX, FIRMS_RADIUS_BASE + Math.round(conf / 5)))
-  : Math.round((FIRMS_RADIUS_MIN + FIRMS_RADIUS_MAX) / 2);
+  const conf = firmsConfidenceScore(p.confidence);
+  const r = conf === null ? 10
+    : FIRMS_RADIUS_MIN + Math.round(conf / 100 * (FIRMS_RADIUS_MAX - FIRMS_RADIUS_MIN));
 
   return L.circleMarker(latlng, {
     radius: r,
@@ -267,10 +264,10 @@ function calfirePopupHtml(p = {}) {
   const name    = p.Name || p.IncidentName || "Incident";
   const county  = p.County || p.CaliforniaCounty || "—";
   const acres   = p.AcresBurned ?? p.GISAcres ?? p.DailyAcres ?? p.acres ?? "—";
-  const pct     = p.PercentContained ?? p.percentcontained ?? "—";
+  const pct     = containmentPercent(p);
   const started = p.Started ?? p.StartDate ?? p.StartDateTime ?? "—";
   const updated = p.Updated ?? p.ModifiedOnDate ?? p.UpdateDate ?? "—";
-  const status  = p.Status ?? p.IncidentStatus ?? (p.IsActive ? "Active" : "—");
+  const status  = p.Status ?? p.IncidentStatus ?? (p.Final === true ? "Final" : p.IsActive === true ? "Active" : p.IsActive === false ? "Inactive" : "—");
   const cause   = p.Cause ?? p.cause ?? "";
   const url     = p.Url || p.URL || p.IncidentURL || "";
 
@@ -281,7 +278,7 @@ function calfirePopupHtml(p = {}) {
         <div class="k">Incident</div><div class="v">${name}</div>
         <div class="k">County</div><div class="v">${county}</div>
         <div class="k">Area</div><div class="v">${acres} acres</div>
-        <div class="k">Contained</div><div class="v">${pct}%</div>
+        <div class="k">Contained</div><div class="v">${pct === null ? "Unknown" : `${pct}%`}</div>
         <div class="k">Started</div><div class="v">${started}</div>
         <div class="k">Updated</div><div class="v">${updated}</div>
         <div class="k">Status</div><div class="v">${status}</div>
@@ -294,11 +291,12 @@ function calfirePopupHtml(p = {}) {
 }
 
 function calfirePoint(latlng, feature) {
-  // 可视 🔥 图标（DivIcon）
+  const properties = feature?.properties || {};
+  const isFinal = properties.Final === true || properties.IsActive === false;
   const pin = L.marker(latlng, {
     icon: L.divIcon({
       className: "calfire-icon leaflet-interactive",
-      html: `<div class="calfire-pin">🔥</div>`,
+      html: isFinal ? '<div class="calfire-pin calfire-pin-final" aria-label="Final incident">✓</div>' : '<div class="calfire-pin">🔥</div>',
       iconSize: [22, 22],       // 稍微放大 20→22
       iconAnchor: [11, 11],
       popupAnchor: [0, -12]
@@ -336,10 +334,10 @@ function calfirePoint(latlng, feature) {
 }
 function calfireStyle(feature) {
   const p = feature?.properties ?? {};
-  const pct = Number(p.PercentContained ?? p.percentcontained ?? p.PERCENT_CONTAINED);
+  const pct = containmentPercent(p);
   const status = String(p.Status ?? p.IncidentStatus ?? "").toLowerCase();
 
-  const col = Number.isFinite(pct)
+  const col = pct !== null
     ? containmentColor(pct)
     : (status.includes("active") || status.includes("new")) ? COLOR.warn : COLOR.brown;
 
@@ -357,8 +355,9 @@ function calfireOnEach(feature, layer) {
 const fireFilters = { firmsTime: "24h", contain: "all", size: "all" };
 
 function sizeBucket(acres) {
+  if (acres === null || acres === undefined || acres === "") return "unknown";
   const v = Number(acres);
-  if (!Number.isFinite(v)) return "all";
+  if (!Number.isFinite(v)) return "unknown";
   if (v >= 5000) return "large";
   if (v >= 500)  return "medium";
   return "small";
@@ -368,32 +367,53 @@ let _fireLegend = null;
 let _fireFilterCtl = null;
 let _fireListCtl = null;
 let _fireListEl  = null;
+let _perimItems = [];
+let _calfireItems = [];
+let _firmsItems = [];
+
+function wirePanelToggle(panel) {
+  const button = panel.querySelector(".panel-toggle");
+  button?.addEventListener("click", () => {
+    const expanded = !panel.classList.contains("is-expanded");
+    document.querySelectorAll(".fire-list.is-expanded, .fire-filters.is-expanded, .fire-legend.is-expanded").forEach(other => {
+      other.classList.remove("is-expanded");
+      other.querySelector(".panel-toggle")?.setAttribute("aria-expanded", "false");
+    });
+    panel.classList.toggle("is-expanded", expanded);
+    button.setAttribute("aria-expanded", String(expanded));
+  });
+}
 
 function createFireLegend() {
   const Legend = L.Control.extend({
-    options: { position: 'bottomright' },
+    options: { position: window.matchMedia('(max-width: 700px)').matches ? 'topright' : 'bottomright' },
     onAdd: function () {
       const div = L.DomUtil.create('div', 'panel legend fire-legend');
       div.innerHTML = `
+        <button type="button" class="panel-toggle" aria-expanded="false">Legend</button>
+        <div class="panel-body">
         <div class="panel-title">Fire Layers</div>
         <div class="legend-row">
           <span class="swatch line" style="--c:#e53935"></span>
-          <span>WFIGS/CAL FIRE Perimeter (color = containment%)</span>
+          <span>Perimeter (color = reported containment; gray = unknown)</span>
         </div>
         <div class="gradient">
           <span>0%</span><div class="bar"></div><span>100%</span>
         </div>
         <div class="legend-row">
           <span class="swatch dot red"></span>
-          <span>FIRMS Hotspot (size ≈ confidence)</span>
+          <span>FIRMS detection (size ≈ confidence)</span>
         </div>
         <div class="legend-row">
           <span class="swatch icon">🔥</span>
-          <span>CAL FIRE Incident</span>
+          <span>CAL FIRE incident (✓ = final)</span>
+        </div>
+        <div class="note">Fetch time may be newer than an individual fire report.</div>
         </div>
       `;
       L.DomEvent.disableClickPropagation(div);
       L.DomEvent.disableScrollPropagation(div);
+      wirePanelToggle(div);
       return div;
     }
   });
@@ -409,13 +429,14 @@ function ensureFireSubFilters(map) {
     onAdd: function() {
       const div = L.DomUtil.create('div', 'panel fire-filters');
       div.innerHTML = `
+        <button type="button" class="panel-toggle" aria-expanded="false">Filters</button>
+        <div class="panel-body">
         <div class="panel-title">Fire Filters</div>
         <label class="row">
           <span>FIRMS Time</span>
           <select id="ff-time">
             <option value="24h">Past 24h</option>
-            <option value="7d">Past 7 days</option>
-            <option value="all">All</option>
+            <option value="5d">Past 5 days</option>
           </select>
         </label>
         <label class="row">
@@ -435,6 +456,7 @@ function ensureFireSubFilters(map) {
             <option value="large">Large (≥5000)</option>
           </select>
         </label>
+        </div>
       `;
       L.DomEvent.disableClickPropagation(div);
       L.DomEvent.disableScrollPropagation(div);
@@ -458,6 +480,8 @@ function ensureFireSubFilters(map) {
       conSel.addEventListener('change', apply);
       sizeSel.addEventListener('change', apply);
 
+      wirePanelToggle(div);
+
       return div;
     }
   });
@@ -471,13 +495,17 @@ function ensureFireSidebar(map) {
     onAdd: function() {
       const div = L.DomUtil.create('div', 'panel fire-list');
       div.innerHTML = `
-        <div class="panel-title">Top 5 Major Fires</div>
-        <div class="sub">Sorted by uncontrolled area (dynamic)</div>
-        <div class="list" id="fire-list-items"></div>
+        <button type="button" class="panel-toggle" aria-expanded="false">Recent fire reports</button>
+        <div class="panel-body">
+          <div class="panel-title">Recent uncontained reports</div>
+          <div class="sub">Last 30 days · by estimated uncontained area</div>
+          <div class="list" id="fire-list-items"></div>
+        </div>
       `;
       L.DomEvent.disableClickPropagation(div);
       L.DomEvent.disableScrollPropagation(div);
       _fireListEl = div.querySelector('#fire-list-items');
+      wirePanelToggle(div);
       return div;
     }
   });
@@ -487,17 +515,19 @@ function ensureFireSidebar(map) {
 function rebuildFireList() {
   if (!_fireListEl) return;
   const items = [];
+  const now = Date.now();
 
   if (_calfireLayer) {
     _calfireLayer.eachLayer(l => {
       const f = l.feature; if (!f) return;
       const p = f.properties||{};
+      if (!isRecentUncontained(p, "calfire", now, RECENT_FIRE_MS)) return;
       const acres = Number(p.AcresBurned ?? p.GISAcres ?? p.DailyAcres ?? p.acres);
-      const pct   = Number(p.PercentContained ?? p.percentcontained ?? p.PERCENT_CONTAINED) || 0;
-      const uncontained = Number.isFinite(acres) ? acres * (1 - Math.min(1, Math.max(0, pct/100))) : 0;
+      const pct = containmentPercent(p);
+      const uncontained = Number.isFinite(acres) ? acres * (1 - pct / 100) : 0;
       const name = p.Name || p.IncidentName || "Incident";
       const center = getFeatureCenter(f);
-      items.push({ name, acres, pct, uncontained, center });
+      items.push({ name, acres, pct, uncontained, center, updated: reportTimeMs(p, "calfire") });
     });
   }
 
@@ -505,32 +535,34 @@ function rebuildFireList() {
     _perimLayer.eachLayer(l => {
       const f = l.feature; if (!f) return;
       const p = f.properties||{};
+      if (!isRecentUncontained(p, "wfigs", now, RECENT_FIRE_MS)) return;
       const acres = Number(p.gisacres ?? p.poly_GISAcres ?? p.GISAcres);
-      const pct   = Number(p.percentcontained ?? p.poly_PercentContained ?? p.PERCENT_CONTAINED) || 0;
-      const uncontained = Number.isFinite(acres) ? acres * (1 - Math.min(1, Math.max(0, pct/100))) : 0;
+      const pct = containmentPercent(p);
+      const uncontained = Number.isFinite(acres) ? acres * (1 - pct / 100) : 0;
       const name = p.incidentname || p.poly_IncidentName || p.IncidentName || "Fire";
       const center = getFeatureCenter(f);
-      items.push({ name, acres, pct, uncontained, center });
+      items.push({ name, acres, pct, uncontained, center, updated: reportTimeMs(p) });
     });
   }
 
   items.sort((a,b)=> (b.uncontained||0) - (a.uncontained||0));
   const top = items.slice(0,5);
 
-  _fireListEl.innerHTML = top.map(it => {
+  _fireListEl.innerHTML = top.length ? top.map(it => {
     const pctLbl = Number.isFinite(it.pct) ? `${Math.round(it.pct)}%` : "—";
     const acresLbl = Number.isFinite(it.acres) ? `${Math.round(it.acres).toLocaleString()} ac` : "—";
     const badgeCls = Number.isFinite(it.pct) ? (it.pct>=70 ? "badge-high" : (it.pct>=30 ? "badge-mid" : "badge-low")) : "badge-unk";
     return `
       <div class="card fire-item" data-center='${JSON.stringify(it.center)}'>
-        <div class="title">${it.name}</div>
+        <div class="title">${escapeHtml(it.name)}</div>
         <div class="meta">
           <span class="chip">${acresLbl}</span>
           <span class="chip ${badgeCls}">${pctLbl}</span>
         </div>
+        <div class="sub">Reported ${new Date(it.updated).toLocaleDateString()}</div>
       </div>
     `;
-  }).join("");
+  }).join("") : '<p class="empty-state">No recent uncontained reports in these sources.</p>';
 
   _fireListEl.querySelectorAll('.fire-item').forEach(el=>{
     el.addEventListener('click', ()=>{
@@ -545,55 +577,56 @@ function rebuildFireList() {
 function applyFireFilters() {
   // WFIGS perimeters
   if (_perimLayer) {
-    _perimLayer.eachLayer(l => {
+    _perimItems.forEach(l => {
       const p = l.feature?.properties ?? {};
-      const pct = Number(p.percentcontained ?? p.poly_PercentContained ?? p.PERCENT_CONTAINED);
+      const pct = containmentPercent(p);
       const acres = p.gisacres ?? p.poly_GISAcres ?? p.GISAcres;
 
       let ok = true;
-      if (fireFilters.contain === "lt70"  && !(Number.isFinite(pct) && pct < 70)) ok = false;
-      if (fireFilters.contain === "gte70" && !(Number.isFinite(pct) && pct >=70)) ok = false;
+      if (fireFilters.contain === "lt70"  && !(pct !== null && pct < 70)) ok = false;
+      if (fireFilters.contain === "gte70" && !(pct !== null && pct >=70)) ok = false;
       const sb = sizeBucket(acres);
       if (fireFilters.size !== "all" && sb !== fireFilters.size) ok = false;
 
-      if (ok) { l.addTo(_group); } else { _group.removeLayer(l); }
+      if (ok) _perimLayer.addLayer(l);
+      else _perimLayer.removeLayer(l);
     });
   }
 
   // CAL FIRE
   if (_calfireLayer) {
-    _calfireLayer.eachLayer(l => {
+    _calfireItems.forEach(l => {
       const p = l.feature?.properties ?? {};
-      const pct = Number(p.PercentContained ?? p.percentcontained ?? p.PERCENT_CONTAINED);
+      const pct = containmentPercent(p);
       const acres = p.AcresBurned ?? p.GISAcres ?? p.DailyAcres ?? p.acres;
 
       let ok = true;
-      if (fireFilters.contain === "lt70"  && !(Number.isFinite(pct) && pct < 70)) ok = false;
-      if (fireFilters.contain === "gte70" && !(Number.isFinite(pct) && pct >=70)) ok = false;
+      if (fireFilters.contain === "lt70"  && !(pct !== null && pct < 70)) ok = false;
+      if (fireFilters.contain === "gte70" && !(pct !== null && pct >=70)) ok = false;
       const sb = sizeBucket(acres);
       if (fireFilters.size !== "all" && sb !== fireFilters.size) ok = false;
 
-      if (l._icon) l._icon.style.display = (ok ? "" : "none");
-      else ok ? l.addTo(_group) : _group.removeLayer(l);
+      if (ok) _calfireLayer.addLayer(l);
+      else _calfireLayer.removeLayer(l);
     });
   }
 
   // FIRMS（time）
   if (_firmsLayer) {
     const now = Date.now();
-    _firmsLayer.eachLayer(l => {
+    _firmsItems.forEach(l => {
       const p = l.feature?.properties ?? {};
       const t = String(p.acq_time||"").padStart(4,"0");
       const iso = p.acq_date ? `${p.acq_date}T${t.slice(0,2)}:${t.slice(2,4)}:00Z` : null;
       const ms  = iso ? new Date(iso).getTime() : null;
 
       let ok = true;
-      if (fireFilters.firmsTime !== "all" && Number.isFinite(ms)) {
-        const spanH = fireFilters.firmsTime === "24h" ? 24 : 24*7;
-        ok = (now - ms) <= spanH*3600*1000;
-      }
-      if (l._path) l._path.style.display = (ok ? "" : "none");
-      else ok ? l.addTo(_group) : _group.removeLayer(l);
+      if (Number.isFinite(ms)) {
+        const spanH = fireFilters.firmsTime === "24h" ? 24 : 24 * 5;
+        ok = ms <= now && now - ms <= spanH * 3600 * 1000;
+      } else ok = false;
+      if (ok) _firmsLayer.addLayer(l);
+      else _firmsLayer.removeLayer(l);
     });
   }
 
@@ -631,6 +664,7 @@ export async function enableFire() {
       style: perimStyle,
       onEachFeature: perimPopup
     }).addTo(_group);
+    _perimItems = _perimLayer.getLayers();
   } catch (e) {
     setDataError("WFIGS");
     console.warn("WFIGS perimeters load failed:", e);
@@ -645,6 +679,7 @@ export async function enableFire() {
       pointToLayer: firmsMarker,
       onEachFeature: firmsPopup
     }).addTo(_group);
+    _firmsItems = _firmsLayer.getLayers();
   } catch (e) {
     setDataError("FIRMS");
     console.warn("FIRMS hotspots load failed:", e);
@@ -659,6 +694,7 @@ export async function enableFire() {
       style: calfireStyle,
       onEachFeature: calfireOnEach
     }).addTo(_group);
+    _calfireItems = _calfireLayer.getLayers();
   } catch (e) {
     setDataError("CAL FIRE");
     console.warn("CAL FIRE incidents load failed:", e);
@@ -668,7 +704,7 @@ export async function enableFire() {
   addFireLegend(map);
   ensureFireSidebar(map);
   ensureFireSubFilters(map);
-  rebuildFireList();
+  applyFireFilters();
 
   // Browser refreshes shared snapshots; only the scheduled job calls providers.
   clearInterval(_refreshTimer);
@@ -684,7 +720,13 @@ export async function enableFire() {
         if (!Array.isArray(fresh?.features)) throw new Error(`Invalid ${name} snapshot`);
         if (layer) {
           const previous = layer.getLayers();
-          try { layer.clearLayers(); layer.addData(fresh); }
+          try {
+            layer.clearLayers();
+            layer.addData(fresh);
+            if (name === "WFIGS") _perimItems = layer.getLayers();
+            if (name === "FIRMS") _firmsItems = layer.getLayers();
+            if (name === "CAL FIRE") _calfireItems = layer.getLayers();
+          }
           catch (error) {
             layer.clearLayers();
             previous.forEach(item => layer.addLayer(item));
@@ -698,7 +740,6 @@ export async function enableFire() {
       }
     }));
     applyFireFilters();
-    rebuildFireList();
   }, 5 * 60 * 1000);
 
   return _group;
@@ -722,10 +763,14 @@ export function disableFire() {
   _perimLayer = null;
   _firmsLayer = null;
   _calfireLayer = null;
+  _perimItems = [];
+  _firmsItems = [];
+  _calfireItems = [];
 
   if (_refreshTimer) { clearInterval(_refreshTimer); _refreshTimer = null; }
 
   removeFireLegend(map);
+  removeFirmsProgression(map);
   if (_fireFilterCtl){ try { map.removeControl(_fireFilterCtl); } catch(_) {} _fireFilterCtl = null; }
   if (_fireListCtl)  { try { map.removeControl(_fireListCtl); } catch(_) {} _fireListCtl = null; }
 }
@@ -827,7 +872,7 @@ async function showFirmsProgressionForPerimeter(perimFeature, days=PROG_LAST_N_D
               <span>${it.label}</span>
             </div>`).join("")}
           <div style="margin-top:6px">
-            <button class="btn" id="btn-hide-prog">Hidden Spread</button>
+            <button class="btn" id="btn-hide-prog">Hide detections</button>
           </div>
         </div>`;
       L.DomEvent.disableClickPropagation(div);

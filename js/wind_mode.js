@@ -27,17 +27,18 @@ async function refreshWind() {
   else if (windLayer?._map) {
     const map = windLayer._map;
     map.removeLayer(windLayer);
-    windLayer = L.velocityLayer({ data, maxVelocity: 25, velocityScale: 0.015, particleMultiplier: 0.008, opacity: 0.9, lineWidth: 1 }).addTo(map);
+    windLayer = L.velocityLayer({ data, displayValues: false, maxVelocity: 25, velocityScale: 0.015, particleMultiplier: 0.008, opacity: 0.9, lineWidth: 1 }).addTo(map);
   }
 }
 
 //Use Leaflet Control to make a small toolbar that only appears in wind mode
-function makeControl(map) {
+function makeControl(map, onClose) {
   // tool only shows in wind mode
   const C = L.Control.extend({
     onAdd: () => {
       const div = L.DomUtil.create('div', 'wind-toolbar');
       div.innerHTML = `
+        <div class="wind-help">Wind vectors · speed scale 0–25 m/s</div>
         <button class="wind-btn" id="wind-refresh" title="Refresh">↻</button>
         <button class="wind-btn" id="wind-close"   title="Close">✕</button>
       `;
@@ -52,8 +53,8 @@ function makeControl(map) {
       };
 
       div.querySelector('#wind-close').onclick = () => {
-        // off=exit wind mode
-        disableWind(map);
+        if (onClose) onClose();
+        else disableWind(map);
       };
 
       return div;
@@ -64,7 +65,7 @@ function makeControl(map) {
   return ctl;
 }
 
-export async function enableWind(map) {
+export async function enableWind(map, onClose) {
 
   // California + offshore 5°
   map.fitBounds([[32.0, -130.0], [42.5, -113.0]], { padding: [8,8] });
@@ -82,6 +83,7 @@ export async function enableWind(map) {
 
   windLayer = L.velocityLayer({
     data: grid,
+    displayValues: false,
     maxVelocity: 25,           // m/s upper limit (affects color bar and speed scale)
     velocityScale: 0.015,      // Particle speed scaling, if it is too slow, increase it
     particleMultiplier: 0.008, // The number of particles is small.
@@ -90,7 +92,7 @@ export async function enableWind(map) {
   }).addTo(map);
 
   //only show the control when wind mode is enabled
-  windCtl = makeControl(map);
+  windCtl = makeControl(map, onClose);
   map.addControl(windCtl);
   refreshTimer = setInterval(() => refreshWind().catch(error => console.warn("Wind refresh failed:", error)), 60 * 60 * 1000);
 }
