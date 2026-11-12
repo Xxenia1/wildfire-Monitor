@@ -1,1 +1,1 @@
-{"type":"FeatureCollection","name":"FIRMS VIIRS CA (last 5 days)","crs":{"type":"name","properties":{"name":"EPSG:4326"}},"fetched_at_utc":"2026-11-12T02:50:24.411Z","source":{"provider":"NASA FIRMS","dataset":"VIIRS_SNPP_NRT","bbox":"-125,32,-113,43.5","day_range":"5"},"features":[]}
+{"type":"FeatureCollection","name":"FIRMS VIIRS CA (last 5 days)","crs":{"type":"name","properties":{"name":"EPSG:4326"}},"fetched_at_utc":"2026-11-12T10:53:36.403Z","source":{"provider":"NASA FIRMS","dataset":"VIIRS_SNPP_NRT","bbox":"-125,32,-113,43.5","day_range":"5"},"features":[]}
